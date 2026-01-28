@@ -46,6 +46,16 @@ export const categories = [
   'Outros',
 ];
 
+// Categorias de despesa para o gráfico (todas devem aparecer mesmo zeradas)
+export const expenseCategories = [
+  'Despesas Administrativas',
+  'Despesas com Pessoal',
+  'Marketing',
+  'Tecnologia',
+  'Impostos',
+  'Outros',
+];
+
 export const subcategories: Record<string, string[]> = {
   'Receita de Serviços': ['Consultoria Empresarial', 'Consultoria Financeira', 'Consultoria Tributária'],
   'Consultoria': ['Projetos', 'Assessoria Mensal', 'Diagnósticos'],
@@ -165,15 +175,49 @@ export const clients: Client[] = [
   { id: 'f5', name: 'Contabilidade Exata', type: 'fornecedor', category: 'Serviços', status: 'inativo', email: 'contato@exata.com.br', phone: '(11) 3456-7893' },
 ];
 
-export const taxRecords: TaxRecord[] = [
-  { id: 'tax1', type: 'ISS', value: 4200, period: '01/2025', dueDate: '2025-02-10', status: 'pago' },
-  { id: 'tax2', type: 'IRPJ', value: 8900, period: '4º Tri 2024', dueDate: '2025-01-31', status: 'pago' },
-  { id: 'tax3', type: 'CSLL', value: 3200, period: '4º Tri 2024', dueDate: '2025-01-31', status: 'pago' },
-  { id: 'tax4', type: 'PIS', value: 1850, period: '01/2025', dueDate: '2025-02-25', status: 'pendente' },
-  { id: 'tax5', type: 'COFINS', value: 8520, period: '01/2025', dueDate: '2025-02-25', status: 'pendente' },
-  { id: 'tax6', type: 'INSS', value: 12500, period: '01/2025', dueDate: '2025-02-20', status: 'pago' },
-  { id: 'tax7', type: 'FGTS', value: 4800, period: '01/2025', dueDate: '2025-02-07', status: 'pago' },
-];
+// Tipos de impostos principais
+export const taxTypes = ['ISS', 'ICMS', 'IRPJ', 'CSLL', 'PIS', 'COFINS'] as const;
+
+// Gerar registros de impostos com datas completas para filtros
+const generateTaxRecords = (): TaxRecord[] => {
+  const records: TaxRecord[] = [];
+  const now = new Date();
+  
+  // Gerar 12 meses de dados para cada imposto
+  taxTypes.forEach((type, typeIndex) => {
+    for (let month = 0; month < 12; month++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - month, 15);
+      const period = `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+      const dueDate = new Date(date.getFullYear(), date.getMonth() + 1, 20).toISOString().split('T')[0];
+      
+      // Valores base por tipo de imposto
+      const baseValues: Record<string, number> = {
+        'ISS': 4200,
+        'ICMS': 0, // Empresa de serviços não tem ICMS
+        'IRPJ': 8900,
+        'CSLL': 3200,
+        'PIS': 1850,
+        'COFINS': 8520,
+      };
+      
+      const variance = 0.8 + Math.random() * 0.4;
+      const value = Math.round(baseValues[type] * variance);
+      
+      records.push({
+        id: `tax-${type}-${month}`,
+        type,
+        value,
+        period,
+        dueDate,
+        status: month > 0 ? 'pago' : (Math.random() > 0.3 ? 'pago' : 'pendente'),
+      });
+    }
+  });
+  
+  return records.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
+};
+
+export const taxRecords = generateTaxRecords();
 
 // Calculate financial metrics
 export const calculateMetrics = (data: Transaction[], periodDays: number = 30) => {
@@ -201,8 +245,15 @@ export const calculateMetrics = (data: Transaction[], periodDays: number = 30) =
 };
 
 // Get spending by category
-export const getSpendingByCategory = (data: Transaction[]) => {
+export const getSpendingByCategory = (data: Transaction[], includeAllCategories = false) => {
   const categoryTotals: Record<string, number> = {};
+  
+  // Inicializa todas as categorias de despesa com zero se includeAllCategories for true
+  if (includeAllCategories) {
+    expenseCategories.forEach(cat => {
+      categoryTotals[cat] = 0;
+    });
+  }
   
   data.filter(t => t.type === 'saida').forEach(t => {
     categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.value;

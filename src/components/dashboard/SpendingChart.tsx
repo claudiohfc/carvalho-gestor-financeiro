@@ -41,7 +41,7 @@ export function SpendingChart({ data, title = 'Despesas por Categoria' }: Spendi
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={data.slice(0, 6)}
+              data={data}
               layout="vertical"
               margin={{ top: 0, right: 30, left: 0, bottom: 0 }}
             >
@@ -70,8 +70,8 @@ export function SpendingChart({ data, title = 'Despesas por Categoria' }: Spendi
                 }}
                 labelStyle={{ color: 'hsl(210, 40%, 98%)' }}
               />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {data.slice(0, 6).map((_, index) => (
+              <Bar dataKey="value" radius={[0, 4, 4, 0]} minPointSize={2}>
+                {data.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Bar>

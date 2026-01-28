@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Receipt, Percent, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Receipt, Percent, AlertTriangle, Calendar, CalendarDays, CalendarRange } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -17,7 +17,9 @@ import { Header } from '@/components/layout/Header';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { InsightCard } from '@/components/dashboard/InsightCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { transactions, taxRecords, calculateMetrics, calculateTaxMetrics } from '@/data/mockData';
+import { Button } from '@/components/ui/button';
+import { transactions, taxRecords, taxTypes, calculateMetrics, calculateTaxMetrics } from '@/data/mockData';
+import { cn } from '@/lib/utils';
 
 const COLORS = [
   'hsl(217, 91%, 60%)',
@@ -28,29 +30,82 @@ const COLORS = [
   'hsl(180, 70%, 50%)',
 ];
 
+type FiscalPeriod = 'dia' | 'mes' | 'ano';
+
 export default function DashboardFiscal() {
   const [period, setPeriod] = useState('30');
+  const [fiscalPeriod, setFiscalPeriod] = useState<FiscalPeriod>('mes');
 
   const metrics = useMemo(() => calculateMetrics(transactions, parseInt(period)), [period]);
+
+  // Filtra impostos por período fiscal
+  const filteredTaxRecords = useMemo(() => {
+    const now = new Date();
+    
+    return taxRecords.filter(record => {
+      const recordDate = new Date(record.dueDate);
+      
+      switch (fiscalPeriod) {
+        case 'dia':
+          return recordDate.toDateString() === now.toDateString();
+        case 'mes':
+          return recordDate.getMonth() === now.getMonth() && 
+                 recordDate.getFullYear() === now.getFullYear();
+        case 'ano':
+          return recordDate.getFullYear() === now.getFullYear();
+        default:
+          return true;
+      }
+    });
+  }, [fiscalPeriod]);
+
   const taxMetrics = useMemo(
-    () => calculateTaxMetrics(taxRecords, metrics.totalEntradas),
-    [metrics.totalEntradas]
+    () => calculateTaxMetrics(filteredTaxRecords, metrics.totalEntradas),
+    [filteredTaxRecords, metrics.totalEntradas]
   );
 
-  // Tax evolution data (mock)
-  const taxEvolution = [
-    { month: 'Ago', value: 32000 },
-    { month: 'Set', value: 35000 },
-    { month: 'Out', value: 28000 },
-    { month: 'Nov', value: 42000 },
-    { month: 'Dez', value: 38000 },
-    { month: 'Jan', value: 45000 },
-  ];
+  // Calcula valores por tipo de imposto
+  const taxByType = useMemo(() => {
+    const result: Record<string, number> = {};
+    taxTypes.forEach(type => {
+      result[type] = filteredTaxRecords
+        .filter(r => r.type === type)
+        .reduce((sum, r) => sum + r.value, 0);
+    });
+    return result;
+  }, [filteredTaxRecords]);
+
+  // Evolução tributária
+  const taxEvolution = useMemo(() => {
+    const months: { month: string; value: number }[] = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
+      const monthRecords = taxRecords.filter(r => {
+        const recordDate = new Date(r.dueDate);
+        return recordDate.getMonth() === date.getMonth() && 
+               recordDate.getFullYear() === date.getFullYear();
+      });
+      const total = monthRecords.reduce((sum, r) => sum + r.value, 0);
+      months.push({ month: monthName.charAt(0).toUpperCase() + monthName.slice(1), value: total });
+    }
+    
+    return months;
+  }, []);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
+    }).format(value);
+
+  const formatCompact = (value: number) =>
+    new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      notation: 'compact',
     }).format(value);
 
   const fiscalInsights = [
@@ -71,6 +126,12 @@ export default function DashboardFiscal() {
     },
   ];
 
+  const periodButtons = [
+    { value: 'dia' as FiscalPeriod, label: 'Dia', icon: Calendar },
+    { value: 'mes' as FiscalPeriod, label: 'Mês', icon: CalendarDays },
+    { value: 'ano' as FiscalPeriod, label: 'Ano', icon: CalendarRange },
+  ];
+
   return (
     <MainLayout>
       <Header
@@ -82,7 +143,40 @@ export default function DashboardFiscal() {
       />
 
       <div className="p-8 space-y-8">
-        {/* KPIs Row */}
+        {/* Filtro de Período Fiscal */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground mr-2">Período Fiscal:</span>
+          {periodButtons.map((btn) => (
+            <Button
+              key={btn.value}
+              variant={fiscalPeriod === btn.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFiscalPeriod(btn.value)}
+              className={cn(
+                'gap-2',
+                fiscalPeriod === btn.value && 'bg-primary text-primary-foreground'
+              )}
+            >
+              <btn.icon className="h-4 w-4" />
+              {btn.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* KPIs por Tipo de Imposto */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {taxTypes.map((type, index) => (
+            <KPICard
+              key={type}
+              title={type}
+              value={formatCompact(taxByType[type])}
+              subtitle={taxByType[type] > 0 ? 'No período' : 'Sem valores'}
+              variant={taxByType[type] > 0 ? 'default' : 'default'}
+            />
+          ))}
+        </div>
+
+        {/* KPIs Gerais */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <KPICard
             title="Total de Impostos Pagos"
@@ -140,7 +234,7 @@ export default function DashboardFiscal() {
                         color: 'hsl(210, 40%, 98%)',
                       }}
                     />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} minPointSize={2}>
                       {taxMetrics.byType.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
