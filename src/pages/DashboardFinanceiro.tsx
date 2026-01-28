@@ -40,7 +40,7 @@ export default function DashboardFinanceiro() {
   }, [filteredTransactions, period]);
 
   const spendingByCategory = useMemo(
-    () => getSpendingByCategory(filteredTransactions),
+    () => getSpendingByCategory(filteredTransactions, true),
     [filteredTransactions]
   );
 
@@ -91,8 +91,10 @@ export default function DashboardFinanceiro() {
           <KPICard
             title="Resultado"
             value={formatCurrency(metrics.resultado)}
+            subtitle={`${metrics.resultado >= 0 ? '+' : ''}${metrics.totalEntradas > 0 ? ((metrics.resultado / metrics.totalEntradas) * 100).toFixed(1) : 0}% de margem`}
             icon={<DollarSign className="h-5 w-5 text-primary" />}
             variant={metrics.resultado >= 0 ? 'positive' : 'negative'}
+            trend={metrics.resultado >= 0 ? 'up' : 'down'}
           />
           <KPICard
             title="Gasto Médio Diário"

@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
+  Scale,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/lancamentos', icon: PlusCircle, label: 'Lançamentos' },
   { to: '/cadastros', icon: Users, label: 'Clientes e Fornecedores' },
   { to: '/importacao', icon: Upload, label: 'Importação de Dados' },
+  { to: '/conciliacao', icon: Scale, label: 'Conciliação Bancária' },
 ];
 
 export function Sidebar() {
