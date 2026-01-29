@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  Home,
   LayoutDashboard,
   Receipt,
   FileText,
@@ -18,13 +19,14 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard Financeiro' },
+  { to: '/', icon: Home, label: 'Home' },
+  { to: '/financeiro', icon: LayoutDashboard, label: 'Dashboard Financeiro' },
   { to: '/fiscal', icon: Receipt, label: 'Dashboard Fiscal' },
+  { to: '/conciliacao', icon: Scale, label: 'Conciliação Bancária' },
   { to: '/registros', icon: FileText, label: 'Meus Registros' },
   { to: '/lancamentos', icon: PlusCircle, label: 'Lançamentos' },
   { to: '/cadastros', icon: Users, label: 'Clientes e Fornecedores' },
   { to: '/importacao', icon: Upload, label: 'Importação de Dados' },
-  { to: '/conciliacao', icon: Scale, label: 'Conciliação Bancária' },
 ];
 
 export function Sidebar() {
