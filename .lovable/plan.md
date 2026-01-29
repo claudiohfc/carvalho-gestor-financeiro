@@ -1,231 +1,340 @@
 
-# Plano de Implementação - Alteracoes e Expansoes
+
+# Plano de Implementacao - Pagina Home (Centro Operacional)
 
 ## Resumo Executivo
 
-Este plano detalha as alteracoes solicitadas para o aplicativo Carvalho Consultores, incluindo melhorias nos dashboards, nova funcionalidade de importacao com modelo Excel, e a criacao da tela de Conciliacao Bancaria.
+Este plano cria a pagina **Home** como o centro operacional do sistema financeiro, com visao consolidada de contas a receber, contas a pagar, projecao financeira e inadimplencia de clientes e fornecedores. A rota atual "/" sera redirecionada para a nova Home, e o Dashboard Financeiro sera movido para "/financeiro".
 
 ---
 
-## 1. Dashboard Financeiro - Melhorias
+## 1. Alteracoes na Navegacao
 
-### 1.1 KPI de Resultado com Porcentagem
+### 1.1 Atualizacao do Menu Lateral
 
-**O que muda:**
-- O card "Resultado" passara a exibir duas informacoes:
-  - Valor absoluto em R$ (atual)
-  - Porcentagem do resultado sobre o total de entradas
-- Indicacao visual clara de lucro (+) ou prejuizo (-)
+**Sidebar.tsx - Nova estrutura de navegacao:**
 
-**Exemplo visual:**
 ```text
-+---------------------------+
-| Resultado                 |
-| R$ 45.230,00             |
-| +18.5% de margem         |
-|        [icone lucro]      |
-+---------------------------+
+- Home (novo) -> /
+- Dashboard Financeiro -> /financeiro (renomeado de /)
+- Dashboard Fiscal -> /fiscal
+- Conciliacao Bancaria -> /conciliacao
+- Meus Registros -> /registros
+- Lancamentos -> /lancamentos
+- Clientes e Fornecedores -> /cadastros
+- Importacao de Dados -> /importacao
 ```
 
-### 1.2 Grafico de Despesas - Todas as Categorias
+**Icone da Home:** `Home` do lucide-react
 
-**O que muda:**
-- O grafico de barras passara a exibir TODAS as categorias cadastradas
-- Categorias sem despesas no periodo aparecerao com valor zero
-- Mantendo consistencia do balanco contabil
+### 1.2 Atualizacao das Rotas
 
-**Arquivos afetados:**
-- `src/data/mockData.ts` - Funcao `getSpendingByCategory()` sera modificada
-- `src/components/dashboard/SpendingChart.tsx` - Ajuste para exibir todas categorias
+**App.tsx - Novas rotas:**
+- `/` -> Home (nova pagina)
+- `/financeiro` -> DashboardFinanceiro (movido)
 
 ---
 
-## 2. Dashboard Fiscal - Cards Individuais por Imposto
+## 2. Estrutura de Dados - Novo Arquivo
 
-### 2.1 Novos KPIs por Imposto
+### 2.1 mockHomeData.ts
 
-**O que sera criado:**
-- Cards individuais para cada tipo de imposto:
-  - ISS, ICMS, IRPJ, CSLL, PIS, COFINS
+Novo arquivo com dados mockados especificos para a Home:
 
-**Layout proposto:**
+**Interfaces:**
 ```text
-+-------+-------+-------+-------+-------+-------+
-|  ISS  | ICMS  | IRPJ  | CSLL  |  PIS  |COFINS |
-| R$4.2k| R$0   | R$8.9k| R$3.2k| R$1.8k| R$8.5k|
-+-------+-------+-------+-------+-------+-------+
+- Receivable: id, clientName, value, dueDate, status (em_aberto | proximo_vencer | vencido)
+- Payable: id, supplierName, value, dueDate, status (em_aberto | proximo_vencer | vencido)
+- AccountBalance: bankName, balance, lastUpdate
 ```
 
-### 2.2 Filtros por Periodo
+**Dados gerados:**
+- 15-20 contas a receber com datas variadas
+- 15-20 contas a pagar com datas variadas
+- Saldo de conta bancaria simulado
 
-**O que sera adicionado:**
-- Filtro especifico na pagina fiscal para:
-  - Dia
-  - Mes
-  - Ano
-- Os filtros afetarao tanto os cards de impostos quanto os graficos
-
-**Arquivos afetados:**
-- `src/pages/DashboardFiscal.tsx` - Adicao de cards e filtros
-- `src/data/mockData.ts` - Expansao dos dados de impostos com datas
+**Funcoes auxiliares:**
+- `getReceivablesByStatus()` - Filtra contas a receber por status
+- `getPayablesByStatus()` - Filtra contas a pagar por status
+- `calculateProjection()` - Gera dados para grafico de projecao
+- `getTotalsByPeriod()` - Calcula totais com filtro de periodo
 
 ---
 
-## 3. Importacao de Dados - Modelo Excel e Balancetes
+## 3. Componentes da Pagina Home
 
-### 3.1 Planilha Modelo para Download
+### 3.1 Layout Geral
 
-**O que sera criado:**
-- Botao de download de planilha modelo (.xlsx)
-- A planilha contera 4 abas:
-  1. **Receitas** - Campos: Data, Descricao, Categoria, Subcategoria, Valor, Cliente, Observacoes
-  2. **Despesas** - Campos: Data, Descricao, Categoria, Subcategoria, Valor, Centro de Custo, Fornecedor
-  3. **Fornecedores** - Campos: Nome, Tipo, Categoria, Status, Email, Telefone
-  4. **Clientes** - Campos: Nome, Tipo, Categoria, Status, Email, Telefone
-- Cada aba tera cabecalhos claros, exemplos preenchidos e instrucoes
-
-**Implementacao:**
-- Uso da biblioteca `xlsx` para gerar o arquivo Excel
-- Dados de exemplo ja preenchidos para facilitar o entendimento
-
-### 3.2 Upload de Balancetes Anuais
-
-**O que sera adicionado:**
-- Nova secao para upload de balancetes
-- Ao importar, os valores serao convertidos em historico de movimentacoes
-- Animacoes de loading e mensagem de sucesso
-
-**Arquivos afetados:**
-- `src/pages/Importacao.tsx` - Nova estrutura com download e upload de balancetes
-- Instalacao do pacote `xlsx`
-
----
-
-## 4. Nova Tela - Conciliacao Bancaria
-
-### 4.1 Menu Lateral
-
-**O que sera adicionado:**
-- Nova opcao "Conciliacao Bancaria" no menu lateral
-- Icone: `Scale` ou `GitCompare` do lucide
-
-### 4.2 Funcionalidades da Tela
-
-**Importacao de Extratos:**
-- Area de upload para extratos bancarios (simulado)
-- Formatos aceitos: CSV, OFX, XLS
-
-**Leitura e Exibicao:**
-- Tabela com lancamentos do extrato importado
-- Colunas: Data, Descricao, Valor, Status
-
-**Cruzamento Automatico:**
-- Sistema cruza lancamentos do extrato com pagamentos em aberto
-- Identificacao automatica de correspondencias
-
-**Status Visual:**
-- **Conciliado** (verde) - Lancamento encontrado no sistema
-- **Pendente** (amarelo) - Aguardando acao do usuario
-- **Divergente** (vermelho) - Valores ou datas nao coincidem
-
-**Acoes Manuais:**
-- Botao "Conciliar" - Marca como conciliado
-- Botao "Ignorar" - Remove da lista de pendencias
-- Tooltips e toasts para feedback
-
-**Layout proposto:**
 ```text
 +----------------------------------------------------------+
-| Conciliacao Bancaria                                     |
-| Importe extratos e concilie com os lancamentos do sistema|
+| Home                                                      |
+| "Bem-vindo ao seu sistema financeiro"                    |
 +----------------------------------------------------------+
-| [Upload de Extrato]  [Resumo: 15 conciliados | 3 pend.]  |
+| [Contas a Receber] [A Receber Atraso] [Pagar Mes] [Atraso]|
 +----------------------------------------------------------+
-| Data     | Descricao          | Valor     | Status | Acao|
-|----------|-------------------|-----------|--------|------|
-| 15/01    | Pagto Fornec ABC  | R$ 850,00 | [Conc] |  -   |
-| 16/01    | Transf PIX        | R$ 500,00 | [Pend] | [OK] |
-| 18/01    | Debito Energia    | R$ 420,00 | [Div]  | [?]  |
+| [Saldo em Conta]        [Despesas a Pagar no Mes]        |
++----------------------------------------------------------+
+| [Grafico de Projecao Financeira - Linha]                 |
+| Filtros: 15 dias | 30 dias | 45 dias                     |
++----------------------------------------------------------+
+| [Inadimplencia Clientes]    [Inadimplencia Fornecedores] |
+| Abas: Em Aberto | Prox. | Vencidos | Abas: Prox. | Venc. |
 +----------------------------------------------------------+
 ```
 
-**Arquivos a criar:**
-- `src/pages/ConciliacaoBancaria.tsx` - Pagina principal
-- `src/data/mockBankData.ts` - Dados mockados de extratos
+### 3.2 Cards de Resumo Financeiro (Linha 1)
 
-**Arquivos a modificar:**
-- `src/components/layout/Sidebar.tsx` - Adicionar item de menu
-- `src/App.tsx` - Adicionar rota
+**4 cards principais com layout semelhante ao KPICard existente:**
+
+| Card | Titulo | Cor Destaque | Icone |
+|------|--------|--------------|-------|
+| 1 | Contas a Receber | Verde (success) | ArrowDownCircle |
+| 2 | Contas a Receber em Atraso | Vermelho (destructive) | AlertCircle |
+| 3 | Contas a Pagar no Mes | Amarelo (warning) | ArrowUpCircle |
+| 4 | Contas a Pagar em Atraso | Vermelho (destructive) | AlertTriangle |
+
+**Comportamento:**
+- Cada card exibe valor total formatado em R$
+- Filtro de periodo compartilhado no Header (Mes atual, 30 dias, 60 dias, 90 dias)
+- Cards de atraso com borda vermelha e fundo sutil vermelho
+- Animacao fade-in ao carregar
+
+### 3.3 Cards de Caixa e Compromissos (Linha 2)
+
+**2 cards maiores:**
+
+| Card | Titulo | Informacao | Icone |
+|------|--------|------------|-------|
+| 1 | Saldo em Conta Atual | Saldo + nome do banco | Wallet |
+| 2 | Despesas a Pagar no Mes | Total + contador de itens | CreditCard |
+
+**Comportamento:**
+- Filtro por mes (dropdown com meses do ano)
+- Exibicao do mes selecionado
+- Indicador visual se saldo for negativo
+
+### 3.4 Grafico de Projecao Financeira
+
+**Componente: ProjectionChart.tsx**
+
+**Tipo:** Grafico de linhas horizontal (Recharts LineChart)
+
+**Eixos:**
+- X: Dias (1, 2, 3... ate 45)
+- Y: Valores em R$
+
+**Linhas:**
+| Linha | Cor | Descricao |
+|-------|-----|-----------|
+| Contas a Receber | Verde (success) | Projecao de recebimentos |
+| Contas a Pagar | Vermelho (destructive) | Projecao de pagamentos |
+| Evolucao do Saldo | Azul (primary) | Saldo projetado dia a dia |
+
+**Filtros de periodo (toggles):**
+- 15 dias
+- 30 dias (padrao)
+- 45 dias
+
+**Comportamento:**
+- Atualizacao dinamica ao mudar filtro
+- Tooltip mostrando valores de cada linha
+- Legenda abaixo do grafico
+
+### 3.5 Quadro de Inadimplencia de Clientes
+
+**Componente: DelinquencyTable.tsx (reutilizavel)**
+
+**Layout:**
+```text
++----------------------------------------+
+| Inadimplencia de Clientes              |
+| [Em Aberto] [Prox. a Vencer] [Vencidos]|
++----------------------------------------+
+| Cliente          | Valor    | Venc.    |
+|------------------|----------|----------|
+| Empresa ABC      | R$ 5.000 | 15/01/26 |
+| Grupo XYZ        | R$ 3.200 | 10/01/26 |
++----------------------------------------+
+| Total: R$ 8.200                        |
++----------------------------------------+
+```
+
+**Abas (Tabs do shadcn):**
+1. Em Aberto - Contas nao vencidas
+2. Proximos a Vencer - Vencimento em 7 dias
+3. Vencidos - Contas ja vencidas
+
+**Comportamento:**
+- Ordenacao por data de vencimento
+- Badge colorido por status
+- Empty state quando nao houver dados
+- Linha de total no rodape
+
+### 3.6 Quadro de Inadimplencia por Fornecedor
+
+**Mesmo componente DelinquencyTable.tsx com props diferentes**
+
+**Abas:**
+1. Proximos a Vencer
+2. Vencidos
+
+**Comportamento identico ao de clientes**
 
 ---
 
-## 5. Estrutura de Arquivos
+## 4. Estrutura de Arquivos
 
 ### Novos Arquivos
 ```text
 src/
   pages/
-    ConciliacaoBancaria.tsx   (nova pagina)
+    Home.tsx                     (pagina principal)
   data/
-    mockBankData.ts           (dados de extratos)
-  utils/
-    excelGenerator.ts         (geracao do modelo Excel)
+    mockHomeData.ts              (dados mockados)
+  components/
+    home/
+      SummaryCard.tsx            (card de resumo)
+      BalanceCard.tsx            (card de saldo/despesas)
+      ProjectionChart.tsx        (grafico de projecao)
+      DelinquencyTable.tsx       (tabela de inadimplencia)
 ```
 
 ### Arquivos Modificados
 ```text
 src/
+  App.tsx                        (novas rotas)
   components/
     layout/
-      Sidebar.tsx             (novo item de menu)
-    dashboard/
-      SpendingChart.tsx       (exibir todas categorias)
-  data/
-    mockData.ts               (expandir dados fiscais)
-  pages/
-    DashboardFinanceiro.tsx   (KPI com porcentagem)
-    DashboardFiscal.tsx       (cards por imposto + filtros)
-    Importacao.tsx            (download modelo + balancetes)
-  App.tsx                     (nova rota)
-  package.json                (dependencia xlsx)
+      Sidebar.tsx                (novo item Home)
 ```
 
 ---
 
-## 6. Dependencias
+## 5. Detalhes de Implementacao
 
-### Nova dependencia a instalar:
-- **xlsx** - Para geracao e leitura de arquivos Excel
+### 5.1 SummaryCard.tsx
+
+**Props:**
+```typescript
+interface SummaryCardProps {
+  title: string;
+  value: number;
+  icon: LucideIcon;
+  variant: 'default' | 'success' | 'warning' | 'danger';
+  count?: number;
+  isOverdue?: boolean;
+}
+```
+
+**Comportamento visual:**
+- Variante `danger` adiciona borda vermelha e fundo vermelho sutil
+- Variante `success` adiciona borda verde
+- Animacao de hover com scale sutil
+
+### 5.2 ProjectionChart.tsx
+
+**Props:**
+```typescript
+interface ProjectionChartProps {
+  days: 15 | 30 | 45;
+  onDaysChange: (days: 15 | 30 | 45) => void;
+}
+```
+
+**Dados calculados:**
+- Saldo inicial = saldo em conta atual
+- Para cada dia, soma recebimentos e subtrai pagamentos
+- Gera array de pontos para as 3 linhas
+
+### 5.3 DelinquencyTable.tsx
+
+**Props:**
+```typescript
+interface DelinquencyTableProps {
+  type: 'cliente' | 'fornecedor';
+  data: Array<{
+    id: string;
+    name: string;
+    value: number;
+    dueDate: string;
+    status: string;
+  }>;
+}
+```
+
+---
+
+## 6. Microinteracoes e UX
+
+### Estados visuais:
+- **Loading:** Skeleton em todos os cards enquanto simula carregamento inicial
+- **Empty State:** Mensagem amigavel quando nao houver dados em cada aba
+- **Hover:** Cards com elevacao sutil e mudanca de borda
+- **Transicoes:** Fade-in suave ao trocar abas
+
+### Feedback visual:
+- Cores consistentes com o resto do sistema
+- Badges coloridos por status (verde/amarelo/vermelho)
+- Tooltips nos graficos com valores formatados
+
+### Animacoes:
+- Cards aparecem com stagger (um apos o outro)
+- Grafico desenha linhas progressivamente
+- Tabelas com transicao suave ao trocar aba
 
 ---
 
 ## 7. Ordem de Implementacao
 
-1. **Dashboard Financeiro** - KPI com porcentagem (rapido)
-2. **Dashboard Financeiro** - Grafico com todas categorias
-3. **Dashboard Fiscal** - Cards individuais por imposto
-4. **Dashboard Fiscal** - Filtros por periodo
-5. **Importacao** - Modelo Excel para download
-6. **Importacao** - Upload de balancetes
-7. **Sidebar** - Adicionar menu Conciliacao
-8. **Conciliacao Bancaria** - Tela completa
+1. **mockHomeData.ts** - Criar dados mockados e funcoes auxiliares
+2. **SummaryCard.tsx** - Componente de card de resumo
+3. **BalanceCard.tsx** - Componente de saldo e despesas
+4. **ProjectionChart.tsx** - Grafico de projecao
+5. **DelinquencyTable.tsx** - Tabela de inadimplencia
+6. **Home.tsx** - Pagina completa integrando componentes
+7. **Sidebar.tsx** - Adicionar item Home no menu
+8. **App.tsx** - Atualizar rotas
+
+---
+
+## 8. Exemplo Visual dos Cards
+
+### Card de Atraso (vermelho):
+```text
++----------------------------------+
+| [!] Contas a Receber em Atraso   |
+|                                  |
+|     R$ 15.420,00                 |
+|     3 contas vencidas            |
+|                                  |
+| Borda vermelha sutil             |
++----------------------------------+
+```
+
+### Card de Saldo:
+```text
++----------------------------------+
+| [Wallet] Saldo em Conta Atual    |
+|          Janeiro 2026            |
+|                                  |
+|     R$ 45.230,00                 |
+|     Banco do Brasil              |
+|                                  |
++----------------------------------+
+```
 
 ---
 
 ## Detalhes Tecnicos
 
-### Geracao do Modelo Excel
-- Utilizacao da biblioteca `xlsx` (SheetJS)
-- Arquivo gerado no cliente (sem backend)
-- Download via Blob URL
+### Padroes a seguir:
+- Usar mesma estrutura do MainLayout e Header
+- Componentes shadcn/ui existentes (Card, Tabs, Badge, Select)
+- Recharts para graficos (mesmo padrao do TrendChart)
+- Formatacao de moeda com Intl.NumberFormat
+- Classes CSS existentes (glass-card, kpi-card, etc.)
 
-### Dados Mockados Adicionais
-- Expansao de `taxRecords` com datas completas
-- Adicao de ICMS aos impostos
-- Dados de extrato bancario para conciliacao
+### Filtros globais:
+- Header tera filtro de mes (Select com meses)
+- Grafico tera filtros proprios de periodo (15/30/45 dias)
 
-### Microinteracoes
-- Loading states em todas importacoes
-- Toasts de sucesso/erro
-- Empty states quando nao houver dados
-- Animacoes de transicao nos status de conciliacao
