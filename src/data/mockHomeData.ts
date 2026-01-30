@@ -31,6 +31,31 @@ export interface ProjectionData {
   balance: number;
 }
 
+export interface CriticalAlert {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'high' | 'medium' | 'low';
+}
+
+export interface AutomaticInsight {
+  id: string;
+  title: string;
+  description: string;
+  type: 'positive' | 'negative' | 'neutral';
+}
+
+export interface MonthProfit {
+  value: number;
+  percentage: number;
+  trend: 'up' | 'down';
+}
+
+export interface OperationalMargin {
+  value: number;
+  target: number;
+}
+
 // Helper para gerar data formatada
 const formatDate = (date: Date): string => format(date, 'yyyy-MM-dd');
 
@@ -177,4 +202,152 @@ export const getOverdueReceivablesCount = (): number => {
 
 export const getOverduePayablesCount = (): number => {
   return payables.filter(p => p.status === 'vencido').length;
+};
+
+// Funções para o Painel Executivo
+export const getProjectedCash = (days: 30 | 60 | 90): number => {
+  let projectedBalance = accountBalance.balance;
+  const endDate = addDays(today, days);
+
+  // Soma recebimentos projetados
+  const futureReceivables = receivables
+    .filter(r => {
+      const dueDate = new Date(r.dueDate);
+      return isAfter(dueDate, today) && isBefore(dueDate, endDate);
+    })
+    .reduce((sum, r) => sum + r.value, 0);
+
+  // Subtrai pagamentos projetados
+  const futurePayables = payables
+    .filter(p => {
+      const dueDate = new Date(p.dueDate);
+      return isAfter(dueDate, today) && isBefore(dueDate, endDate);
+    })
+    .reduce((sum, p) => sum + p.value, 0);
+
+  projectedBalance = projectedBalance + futureReceivables - futurePayables;
+
+  return projectedBalance;
+};
+
+export const getMonthProfit = (): MonthProfit => {
+  const totalReceivables = getTotalReceivables();
+  const totalPayables = getTotalPayables();
+  const profit = totalReceivables - totalPayables;
+  
+  // Simulando comparação com mês anterior
+  const previousProfit = profit * 0.85;
+  const percentage = previousProfit !== 0 
+    ? ((profit - previousProfit) / Math.abs(previousProfit)) * 100 
+    : 0;
+
+  return {
+    value: profit,
+    percentage: Math.round(percentage * 10) / 10,
+    trend: profit >= previousProfit ? 'up' : 'down',
+  };
+};
+
+export const getOperationalMargin = (): OperationalMargin => {
+  const totalReceivables = getTotalReceivables();
+  const operationalCosts = getTotalPayables() * 0.7; // 70% são custos operacionais
+  const margin = totalReceivables > 0 
+    ? ((totalReceivables - operationalCosts) / totalReceivables) * 100 
+    : 0;
+
+  return {
+    value: Math.round(margin * 10) / 10,
+    target: 20,
+  };
+};
+
+export const getCriticalAlerts = (): CriticalAlert[] => {
+  const alerts: CriticalAlert[] = [];
+  
+  const overdueReceivables = getOverdueReceivablesCount();
+  const overduePayables = getOverduePayablesCount();
+  const overdueReceivablesValue = getTotalReceivablesOverdue();
+  const overduePayablesValue = getTotalPayablesOverdue();
+
+  if (overdueReceivables > 0) {
+    alerts.push({
+      id: 'alert-1',
+      title: `${overdueReceivables} contas a receber vencidas`,
+      description: `Total de ${formatCurrency(overdueReceivablesValue)} em atraso`,
+      severity: overdueReceivables > 3 ? 'high' : 'medium',
+    });
+  }
+
+  if (overduePayables > 0) {
+    alerts.push({
+      id: 'alert-2',
+      title: `${overduePayables} contas a pagar vencidas`,
+      description: `Total de ${formatCurrency(overduePayablesValue)} pendente`,
+      severity: overduePayables > 2 ? 'high' : 'medium',
+    });
+  }
+
+  const projectedCash30 = getProjectedCash(30);
+  if (projectedCash30 < 10000) {
+    alerts.push({
+      id: 'alert-3',
+      title: 'Caixa projetado baixo em 30 dias',
+      description: `Saldo previsto: ${formatCurrency(projectedCash30)}`,
+      severity: projectedCash30 < 0 ? 'high' : 'medium',
+    });
+  }
+
+  return alerts;
+};
+
+export const getAutomaticInsights = (): AutomaticInsight[] => {
+  const insights: AutomaticInsight[] = [];
+  
+  const monthProfit = getMonthProfit();
+  const margin = getOperationalMargin();
+  const totalReceivables = getTotalReceivables();
+  const totalPayables = getTotalPayables();
+
+  if (monthProfit.trend === 'up' && monthProfit.percentage > 10) {
+    insights.push({
+      id: 'insight-1',
+      title: 'Lucro em crescimento',
+      description: `Aumento de ${monthProfit.percentage}% em relação ao mês anterior`,
+      type: 'positive',
+    });
+  }
+
+  if (margin.value >= margin.target) {
+    insights.push({
+      id: 'insight-2',
+      title: 'Meta de margem atingida',
+      description: `Margem operacional de ${margin.value}% supera a meta de ${margin.target}%`,
+      type: 'positive',
+    });
+  } else {
+    insights.push({
+      id: 'insight-3',
+      title: 'Margem abaixo da meta',
+      description: `Faltam ${(margin.target - margin.value).toFixed(1)}% para atingir a meta`,
+      type: 'negative',
+    });
+  }
+
+  if (totalReceivables > totalPayables * 1.5) {
+    insights.push({
+      id: 'insight-4',
+      title: 'Balanço favorável',
+      description: 'Recebíveis superam pagamentos em mais de 50%',
+      type: 'positive',
+    });
+  }
+
+  insights.push({
+    id: 'insight-5',
+    title: 'Concentração de vencimentos',
+    description: 'Maior volume de pagamentos entre os dias 10 e 15',
+    type: 'neutral',
+  });
+
+  return insights;
 };

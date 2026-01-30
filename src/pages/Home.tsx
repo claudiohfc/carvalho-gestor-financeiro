@@ -5,6 +5,7 @@ import { SummaryCard } from '@/components/home/SummaryCard';
 import { BalanceCard } from '@/components/home/BalanceCard';
 import { ProjectionChart } from '@/components/home/ProjectionChart';
 import { DelinquencyTable } from '@/components/home/DelinquencyTable';
+import { ExecutivePanel } from '@/components/home/ExecutivePanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   ArrowDownCircle,
@@ -56,6 +57,16 @@ export default function Home() {
               ))}
             </div>
             <Skeleton className="h-[380px] rounded-xl" />
+            <div className="grid gap-4 lg:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-32 rounded-xl" />
+              ))}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-xl" />
+              ))}
+            </div>
             <div className="grid gap-4 lg:grid-cols-2">
               {[...Array(2)].map((_, i) => (
                 <Skeleton key={i} className="h-[400px] rounded-xl" />
@@ -138,6 +149,9 @@ export default function Home() {
           <section>
             <ProjectionChart />
           </section>
+
+          {/* Painel Executivo de Decisão */}
+          <ExecutivePanel />
 
           {/* Tabelas de Inadimplência */}
           <section>
