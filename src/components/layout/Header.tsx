@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Calendar, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, Filter, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -37,6 +37,33 @@ export function Header({
   category = 'all',
   onCategoryChange,
 }: HeaderProps) {
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return document.documentElement.classList.contains('dark');
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    // Set dark mode as default on mount
+    if (!localStorage.getItem('theme')) {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+    if (newIsDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 flex min-h-[80px] items-center justify-between border-b border-border bg-background/95 px-8 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div>
@@ -44,42 +71,59 @@ export function Header({
         {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
 
-      {showFilters && (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <Select value={period} onValueChange={onPeriodChange}>
-              <SelectTrigger className="w-[140px] bg-card border-border">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {periods.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>
-                    {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex items-center gap-3">
+        {showFilters && (
+          <>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Select value={period} onValueChange={onPeriodChange}>
+                <SelectTrigger className="w-[140px] bg-card border-border">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  {periods.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={category} onValueChange={onCategoryChange}>
-              <SelectTrigger className="w-[200px] bg-card border-border">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                <SelectItem value="all">Todas as categorias</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={category} onValueChange={onCategoryChange}>
+                <SelectTrigger className="w-[200px] bg-card border-border">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="all">Todas as categorias</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
+        {/* Theme Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="h-9 w-9"
+          title={isDark ? 'Modo claro' : 'Modo escuro'}
+        >
+          {isDark ? (
+            <Sun className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <Moon className="h-4 w-4 text-muted-foreground" />
+          )}
+        </Button>
+      </div>
     </header>
   );
 }

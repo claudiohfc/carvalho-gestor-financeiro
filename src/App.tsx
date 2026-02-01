@@ -6,6 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import DashboardFiscal from "./pages/DashboardFiscal";
+import DashboardAdministrativo from "./pages/DashboardAdministrativo";
+import DashboardAnalitico from "./pages/DashboardAnalitico";
+import DREGerencial from "./pages/DREGerencial";
+import SimuladorCenarios from "./pages/SimuladorCenarios";
 import MeusRegistros from "./pages/MeusRegistros";
 import Lancamentos from "./pages/Lancamentos";
 import Cadastros from "./pages/Cadastros";
@@ -26,6 +30,10 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/financeiro" element={<DashboardFinanceiro />} />
           <Route path="/fiscal" element={<DashboardFiscal />} />
+          <Route path="/administrativo" element={<DashboardAdministrativo />} />
+          <Route path="/analitico" element={<DashboardAnalitico />} />
+          <Route path="/dre" element={<DREGerencial />} />
+          <Route path="/simulador" element={<SimuladorCenarios />} />
           <Route path="/registros" element={<MeusRegistros />} />
           <Route path="/lancamentos" element={<Lancamentos />} />
           <Route path="/cadastros" element={<Cadastros />} />

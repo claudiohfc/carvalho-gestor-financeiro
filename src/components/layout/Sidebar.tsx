@@ -13,6 +13,10 @@ import {
   ChevronRight,
   Building2,
   Scale,
+  BarChart3,
+  Calculator,
+  TrendingUp,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,6 +26,10 @@ const navItems = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/financeiro', icon: LayoutDashboard, label: 'Dashboard Financeiro' },
   { to: '/fiscal', icon: Receipt, label: 'Dashboard Fiscal' },
+  { to: '/administrativo', icon: Settings, label: 'Dashboard Administrativo' },
+  { to: '/analitico', icon: BarChart3, label: 'Dashboard Analítico' },
+  { to: '/dre', icon: FileText, label: 'DRE Gerencial' },
+  { to: '/simulador', icon: Calculator, label: 'Simulador de Cenários' },
   { to: '/conciliacao', icon: Scale, label: 'Conciliação Bancária' },
   { to: '/registros', icon: FileText, label: 'Meus Registros' },
   { to: '/lancamentos', icon: PlusCircle, label: 'Lançamentos' },
