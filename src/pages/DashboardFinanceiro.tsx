@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, CreditCard, Calculator, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, CreditCard, Calculator, Calendar, Users, Briefcase, Gift, Bus, Award, Umbrella } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { InsightCard } from '@/components/dashboard/InsightCard';
 import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { TrendChart } from '@/components/dashboard/TrendChart';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   transactions,
   calculateMetrics,
@@ -13,6 +14,7 @@ import {
   getDailyTrend,
   generateInsights,
 } from '@/data/mockData';
+import { getPayrollSummary, formatCurrency as formatCurrencyAnalytics } from '@/data/mockAnalyticsData';
 
 export default function DashboardFinanceiro() {
   const [period, setPeriod] = useState('30');
@@ -50,6 +52,8 @@ export default function DashboardFinanceiro() {
   }, [filteredTransactions, period]);
 
   const insights = useMemo(() => generateInsights(transactions), []);
+
+  const payrollSummary = useMemo(() => getPayrollSummary(), []);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', {
@@ -111,6 +115,82 @@ export default function DashboardFinanceiro() {
             value={formatCurrency(metrics.gastoMedioAnual)}
             icon={<Calculator className="h-5 w-5 text-primary" />}
           />
+        </div>
+
+        {/* Cards de Folha de Pagamento */}
+        <div>
+          <h3 className="mb-4 text-lg font-medium text-foreground">Despesas com Pessoal</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+            <Card className="bg-card border-border hover:border-primary/30 transition-all">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">Pró-labore</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.prolabore)}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card border-border hover:border-primary/30 transition-all">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-4 w-4 text-success" />
+                  <span className="text-xs text-muted-foreground">Dist. Lucros</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.distribuicao)}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card border-border hover:border-primary/30 transition-all">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="h-4 w-4 text-warning" />
+                  <span className="text-xs text-muted-foreground">Comissões</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.comissoes)}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card border-border hover:border-primary/30 transition-all">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">Salários</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.salarios)}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card border-border hover:border-primary/30 transition-all">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Bus className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Vale Transporte</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.vt)}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card border-border hover:border-primary/30 transition-all">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gift className="h-4 w-4 text-success" />
+                  <span className="text-xs text-muted-foreground">13º Salário</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.decimo)}</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-card border-border hover:border-primary/30 transition-all">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Umbrella className="h-4 w-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">Férias</span>
+                </div>
+                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.ferias)}</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Charts Row */}
