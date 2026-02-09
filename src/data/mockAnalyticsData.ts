@@ -165,6 +165,27 @@ export const serviceLines: ServiceLine[] = [
   { id: 'sl-6', name: 'Diagnósticos', revenue: 32000, cost: 14000, margin: 56.3, clients: 4 },
 ];
 
+// Receita por produto
+export interface ProductRevenue {
+  id: string;
+  name: string;
+  revenue: number;
+  cost: number;
+  margin: number;
+  unitsSold: number;
+}
+
+export const productRevenues: ProductRevenue[] = [
+  { id: 'pr-1', name: 'Consultoria Estratégica', revenue: 145000, cost: 58000, margin: 60, unitsSold: 24 },
+  { id: 'pr-2', name: 'Treinamentos In-Company', revenue: 98000, cost: 35000, margin: 64.3, unitsSold: 18 },
+  { id: 'pr-3', name: 'Assessoria Mensal', revenue: 72000, cost: 28000, margin: 61.1, unitsSold: 12 },
+  { id: 'pr-4', name: 'Software de Gestão', revenue: 56000, cost: 15000, margin: 73.2, unitsSold: 42 },
+  { id: 'pr-5', name: 'Diagnósticos Empresariais', revenue: 32000, cost: 14000, margin: 56.3, unitsSold: 8 },
+  { id: 'pr-6', name: 'Workshops', revenue: 45000, cost: 15000, margin: 66.7, unitsSold: 30 },
+  { id: 'pr-7', name: 'Palestras', revenue: 38000, cost: 12000, margin: 68.4, unitsSold: 15 },
+  { id: 'pr-8', name: 'Mentoria Individual', revenue: 28000, cost: 8000, margin: 71.4, unitsSold: 10 },
+];
+
 // Receita por funcionário
 export const employeeRevenues: EmployeeRevenue[] = [
   { id: 'emp-1', name: 'Carlos Carvalho', role: 'Diretor', revenue: 95000, cost: 18000, productivity: 120 },
@@ -183,6 +204,12 @@ export const clientRevenues: ClientRevenue[] = [
   { id: 'cli-4', name: 'StartUp X', revenue: 28000, cost: 10000, margin: 64.3, lifetime: 12 },
   { id: 'cli-5', name: 'Digital Corp', revenue: 25000, cost: 9500, margin: 62, lifetime: 8 },
   { id: 'cli-6', name: 'Indústria Nacional', revenue: 22000, cost: 9000, margin: 59.1, lifetime: 30 },
+  { id: 'cli-7', name: 'Comércio Central', revenue: 18500, cost: 7200, margin: 61.1, lifetime: 14 },
+  { id: 'cli-8', name: 'Logística Express', revenue: 15000, cost: 6000, margin: 60, lifetime: 9 },
+  { id: 'cli-9', name: 'Farmácia Rede', revenue: 12000, cost: 5000, margin: 58.3, lifetime: 20 },
+  { id: 'cli-10', name: 'Auto Center', revenue: 9500, cost: 4000, margin: 57.9, lifetime: 6 },
+  { id: 'cli-11', name: 'Padaria Estrela', revenue: 7800, cost: 3200, margin: 59, lifetime: 15 },
+  { id: 'cli-12', name: 'Restaurante Sabor', revenue: 6500, cost: 2800, margin: 56.9, lifetime: 11 },
 ];
 
 // ==================== DRE GERENCIAL ====================
@@ -468,12 +495,16 @@ export interface EfficiencyMetric {
 }
 
 export const operationalCosts: OperationalCost[] = [
-  { id: 'oc-1', category: 'Infraestrutura', value: 15500, previousValue: 14800, budget: 16000 },
-  { id: 'oc-2', category: 'Tecnologia', value: 8500, previousValue: 7800, budget: 9000 },
-  { id: 'oc-3', category: 'Utilities', value: 4200, previousValue: 4000, budget: 4500 },
-  { id: 'oc-4', category: 'Manutenção', value: 2800, previousValue: 3200, budget: 3000 },
-  { id: 'oc-5', category: 'Seguros', value: 2100, previousValue: 2100, budget: 2100 },
-  { id: 'oc-6', category: 'Outros', value: 3900, previousValue: 3500, budget: 4000 },
+  { id: 'oc-1', category: 'Aluguel e Infraestrutura', value: 12000, previousValue: 12000, budget: 12500 },
+  { id: 'oc-2', category: 'Tecnologia e Software', value: 8500, previousValue: 7800, budget: 9000 },
+  { id: 'oc-3', category: 'Energia, Água e Utilities', value: 4200, previousValue: 4000, budget: 4500 },
+  { id: 'oc-4', category: 'Material de Escritório', value: 1200, previousValue: 1100, budget: 1500 },
+  { id: 'oc-5', category: 'Manutenção e Conservação', value: 2800, previousValue: 3200, budget: 3000 },
+  { id: 'oc-6', category: 'Seguros', value: 2100, previousValue: 2100, budget: 2100 },
+  { id: 'oc-7', category: 'Serviços Contábeis', value: 3500, previousValue: 3500, budget: 3500 },
+  { id: 'oc-8', category: 'Marketing e Publicidade', value: 6200, previousValue: 5500, budget: 7000 },
+  { id: 'oc-9', category: 'Telefonia e Internet', value: 1800, previousValue: 1750, budget: 2000 },
+  { id: 'oc-10', category: 'Transporte e Logística', value: 2900, previousValue: 2700, budget: 3000 },
 ];
 
 export const peopleMetrics: PeopleMetric[] = [
