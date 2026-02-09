@@ -1,456 +1,316 @@
 
-# Plano de Implementacao - Minha Empresa (Cadastros e Estrutura Base)
+# Plano de Refino - Navegacao, Layout e Funcionalidades
 
-## Resumo Executivo
+## Resumo
 
-Este plano implementa a nova secao **Minha Empresa** como um modulo completo de cadastros organizacionais, com navegacao por abas internas para gerenciamento de dados da empresa, colaboradores, contas bancarias, plano de contas e metas de receita. Toda a implementacao segue os padroes ja existentes no projeto usando dados mockados e estado local.
+Este plano aplica melhorias de navegacao, cria a aba Departamento Pessoal, adiciona cards expansiveis com explicacoes em todo o app, ajusta o Dashboard Administrativo e Analitico, e expande o Simulador de Cenarios. Nenhum fluxo existente sera quebrado.
 
 ---
 
-## 1. Nova Entrada no Menu Lateral
+## 1. Menu Lateral - Agrupamento de Dashboards
 
-### Alteracao na Sidebar
+### Arquivo: `src/components/layout/Sidebar.tsx`
 
-**Arquivo:** `src/components/layout/Sidebar.tsx`
+**Alteracoes:**
+- Substituir a lista plana de navegacao por uma estrutura com grupo colapsavel "Dashboards"
+- O grupo contera: Financeiro, Fiscal, Administrativo, Analitico
+- Usar Collapsible do radix-ui (ja instalado) para expandir/recolher
+- Adicionar item "Departamento Pessoal" com icone `Users` logo abaixo do grupo Dashboards
+- Adicionar rota `/departamento-pessoal`
+- O grupo inicia expandido se a rota ativa pertence ao grupo
 
-**Modificacoes:**
-- Adicionar novo item de navegacao "Minha Empresa" apos "Importacao de Dados"
-- Icone: `Building` do lucide-react
-- Rota: `/empresa`
-
-**Posicao no menu:**
+**Estrutura final do menu:**
 ```text
-- Home
-- Minha Empresa  <- NOVA
-- Dashboard Financeiro
-- Dashboard Fiscal
-- Conciliacao Bancaria
-- Meus Registros
-- Lancamentos
-- Clientes e Fornecedores
-- Importacao de Dados
-- [Perfil no rodape]
+Home
+Dashboards (colapsavel)
+  Financeiro
+  Fiscal
+  Administrativo
+  Analitico
+Departamento Pessoal     <- NOVO
+DRE Gerencial
+Simulador de Cenarios
+Conciliacao Bancaria
+Meus Registros
+Lancamentos
+Clientes e Fornecedores
+Importacao de Dados
 ```
 
 ---
 
-## 2. Estrutura de Dados - Novo Arquivo
+## 2. Cards - Ajuste Visual Global
 
-### mockCompanyData.ts
+### Arquivos afetados:
+- `src/components/dashboard/KPICard.tsx`
+- `src/components/home/SummaryCard.tsx`
+- `src/components/home/BalanceCard.tsx`
+- `src/components/home/ExecutivePanel.tsx`
+- `src/index.css` (classes globais kpi-card)
 
-**Arquivo:** `src/data/mockCompanyData.ts`
-
-**Interfaces a criar:**
-
-```text
-CompanyData:
-  - name: string
-  - cnpj: string
-  - website: string
-  - sector: string
-  - productTypes: string
-  - services: string
-  - averageMonthlyRevenue: number
-
-Partner:
-  - id: string
-  - name: string
-  - role: string
-  - phone: string
-  - cpf: string
-
-Employee:
-  - id: string
-  - name: string
-  - role: string
-  - phone: string
-  - cpf: string
-
-Contractor:
-  - id: string
-  - name: string
-  - activities: string
-  - phone: string
-  - cpf: string
-
-BankAccount:
-  - id: string
-  - bankName: string
-  - accountNumber: string
-  - currentBalance: number
-  - totalEntries: number
-  - totalExits: number
-  - bankFees: number
-  - paidTaxes: number
-  - pendingTaxes: number
-
-AccountCategory:
-  - id: string
-  - description: string
-  - type: 'receita' | 'despesa'
-  - dreRange: string
-
-AccountSubcategory:
-  - id: string
-  - description: string
-  - type: 'receita' | 'despesa'
-  - dreRange: string
-  - categoryId: string
-
-RevenueGoal:
-  - id: string
-  - period: string
-  - targetValue: number
-  - currentValue: number
-  - status: 'on_track' | 'at_risk' | 'achieved' | 'missed'
-```
-
-**Dados mockados iniciais:**
-- 1 empresa (Carvalho Consultores)
-- 3 socios
-- 5 funcionarios
-- 3 terceiros
-- 3 contas bancarias
-- 10 categorias do plano de contas
-- 15 subcategorias
-- 6 metas de receita (mensal e trimestral)
-
-**Funcoes auxiliares:**
-- `calculateSectorResult()` - Calculo de resultado do setor
-- `calculateContributionMargin()` - Calculo de margem de contribuicao
-- `calculateProfitability()` - Calculo de lucratividade
-- `getGoalProgress()` - Porcentagem de progresso das metas
+**Alteracoes:**
+- Reduzir padding de p-6 para p-4 nos cards
+- Reduzir font-size dos valores de text-2xl/text-3xl para text-xl/text-2xl
+- Reduzir font-size dos titulos de text-sm para text-xs
+- Remover abreviacoes de texto (ex: "Dist. Lucros" -> "Distribuicao de Lucros")
+- Ajustar gap entre cards de gap-4 para gap-3
+- Reduzir tamanho dos icones de h-10 w-10 para h-8 w-8
 
 ---
 
-## 3. Componentes da Pagina Minha Empresa
+## 3. Nova Aba - Departamento Pessoal
 
-### 3.1 Estrutura Principal com Abas
+### Novos arquivos:
+- `src/pages/DepartamentoPessoal.tsx`
+- `src/data/mockPeopleData.ts`
+- `src/components/people/PeopleSummaryCards.tsx`
+- `src/components/people/PeopleTable.tsx`
+- `src/components/people/FinancialTable.tsx`
+- `src/components/people/PersonFormDialog.tsx`
 
-**Arquivo:** `src/pages/MinhaEmpresa.tsx`
+### Arquivo modificado:
+- `src/App.tsx` - Adicionar rota `/departamento-pessoal`
 
-**Layout com Tabs (shadcn/ui):**
+### 3.1 Dados Mockados (`mockPeopleData.ts`)
 
+Interfaces:
+- `Partner`: id, name, cpf, email, phone, startDate, endDate, prolabore, comissoes, reembolsos
+- `Employee`: id, name, cpf, email, phone, startDate, endDate, salario, vt, va, beneficios, decimo1, decimo2, ferias, fgts, inss, ir
+- `Contractor`: id, name, cpf, email, phone, startDate, endDate, retiradas, comissoes
+
+Dados: 3 socios, 5 funcionarios, 3 terceiros com valores mensais e anuais.
+
+Funcoes auxiliares:
+- `getTotalPartnerCosts(period)` - Total gastos com socios
+- `getTotalEmployeeCosts(period)` - Total gastos com funcionarios
+- `getTotalContractorCosts(period)` - Total gastos com terceiros
+
+### 3.2 Pagina Principal (`DepartamentoPessoal.tsx`)
+
+Layout:
 ```text
 +----------------------------------------------------------+
-| Minha Empresa                                             |
-| "Configuracoes e cadastros da organizacao"                |
+| Departamento Pessoal                                      |
+| "Gestao de pessoas e custos com pessoal"                 |
 +----------------------------------------------------------+
-| [Dados Gerais] [Pessoas] [Contas] [Categorias] [Sub] [Metas]|
+| Filtros: [Mes] [Ano]                                      |
 +----------------------------------------------------------+
-|                                                          |
-|              [Conteudo da aba selecionada]               |
-|                                                          |
+| [Total Socios] [Total Funcionarios] [Total Terceiros]    |
++----------------------------------------------------------+
+| Quadro Socios        | Quadro Financeiro Socios          |
++----------------------------------------------------------+
+| Quadro Funcionarios  | Quadro Financeiro Funcionarios    |
++----------------------------------------------------------+
+| Quadro Terceiros     | Quadro Financeiro Terceiros       |
 +----------------------------------------------------------+
 ```
 
-**Abas:**
-1. Dados Gerais
-2. Pessoas (Socios, Funcionarios, Terceiros)
-3. Contas Bancarias
-4. Categorias
-5. Subcontas
-6. Metas de Receita
+### 3.3 Cards Resumo (Topo)
+- 3 cards com totais de gastos por categoria
+- Filtros por Mes e Ano (Select do shadcn)
+
+### 3.4 Quadros de Cadastro
+Tabelas com colunas: Nome, CPF, Email, Telefone, Data Inicio, Data Saida, Acoes
+- Botao "+ Adicionar" abre Dialog com formulario
+- Botao editar/excluir em cada linha
+- Dialog de confirmacao para exclusao
+
+### 3.5 Quadros Financeiros
+
+**Socios:** Tabela com Nome, Pro-labore, Comissoes, Reembolsos, Total
+- Filtros: Total, Mes, Ano
+
+**Funcionarios:** Tabela com Nome, Salario, VT, VA, Beneficios, 13o (1a parcela), 13o (2a parcela), Ferias, FGTS, INSS, IR, Total
+- Filtros: Total, Mes, Ano
+
+**Terceiros:** Tabela com Nome, Retiradas, Comissoes, Total
+- Filtros: Total, Mes, Ano
 
 ---
 
-### 3.2 Aba 1 - Dados Gerais da Empresa
+## 4. Home - Cards Expansiveis com Explicacao
 
-**Componente:** `src/components/company/CompanyGeneralTab.tsx`
+### Arquivos afetados:
+- `src/components/home/SummaryCard.tsx`
+- `src/components/home/BalanceCard.tsx`
+- `src/components/home/ExecutivePanel.tsx`
+- `src/components/dashboard/KPICard.tsx`
+- `src/pages/DashboardFinanceiro.tsx`
 
-**Secao Empresa (Formulario):**
-| Campo | Tipo | Placeholder |
-|-------|------|-------------|
-| Nome da empresa | Input text | Razao social |
-| CNPJ | Input text | 00.000.000/0000-00 |
-| Site | Input text | www.exemplo.com.br |
-| Setor | Select | Selecione o setor |
-| Produtos vendidos | Textarea | Descreva os produtos |
-| Servicos prestados | Textarea | Descreva os servicos |
-| Faturamento medio mensal | Input number | R$ 0,00 |
+**Alteracao:**
+- Adicionar prop `explanation?: string` a todos os componentes de card
+- Usar Collapsible do radix-ui para expandir/recolher explicacao
+- Botao discreto (ChevronDown/ChevronUp) no canto do card
+- Ao expandir, mostrar texto explicativo em fundo sutil (bg-muted/30)
+- Seguir o mesmo padrao de drill-down do Dashboard Analitico
 
-**Secao Pessoas (Visualizacao resumida):**
-- Mini-tabela com socios (nome, cargo)
-- Mini-tabela com funcionarios (nome, cargo)
-- Mini-tabela com terceiros (nome, atividades)
+**Explicacoes para cada card da Home:**
+- Contas a Receber: "Total de valores a serem recebidos de clientes no periodo selecionado."
+- Contas a Receber em Atraso: "Valores que ja ultrapassaram a data de vencimento e ainda nao foram recebidos."
+- Contas a Pagar no Mes: "Soma de todos os compromissos financeiros com vencimento no mes vigente."
+- Contas a Pagar em Atraso: "Compromissos financeiros que ja venceram e ainda nao foram pagos."
+- Saldo em Conta: "Saldo disponivel na conta bancaria principal da empresa."
+- Despesas a Pagar: "Total de despesas com vencimento previsto para o mes corrente."
+- Cards do Painel Executivo: Explicacoes para Caixa Atual, Caixa Projetado, Lucro, Margem
 
-**Cards de Metricas do Setor (ao final):**
-| Card | Titulo | Calculo |
-|------|--------|---------|
-| 1 | Resultado do Setor | Receitas - Despesas do setor |
-| 2 | Margem de Contribuicao | (Receita - Custos Variaveis) / Receita |
-| 3 | Lucratividade Final | Lucro Liquido / Receita Total |
-
-**Comportamento:**
-- Botao "Salvar Alteracoes" com loading state
-- Toast de sucesso ao salvar
-- Cards com animacao fade-in
+**Aplicar em todos os dashboards:** O mesmo comportamento sera replicado nos KPIs do Dashboard Financeiro, Fiscal, Administrativo e Analitico.
 
 ---
 
-### 3.3 Aba 2 - Socios, Funcionarios e Terceiros
+## 5. Dashboard Financeiro - Ajustes de Layout
 
-**Componente:** `src/components/company/PeopleTab.tsx`
+### Arquivo: `src/pages/DashboardFinanceiro.tsx`
 
-**Sub-abas internas (Tabs aninhadas):**
-
-```text
-+-------------------------------------------------+
-| [Socios] [Funcionarios] [Terceiros]             |
-+-------------------------------------------------+
-| Tabela + Formulario de adicao/edicao            |
-+-------------------------------------------------+
-```
-
-**Estrutura para cada sub-aba:**
-
-**Tabela:**
-| Coluna | Socios | Funcionarios | Terceiros |
-|--------|--------|--------------|-----------|
-| Nome | X | X | X |
-| Cargo/Atividades | X | X | X |
-| Telefone | X | X | X |
-| CPF | X | X | X |
-| Acoes | X | X | X |
-
-**Acoes por linha:**
-- Editar (abre dialog)
-- Remover (com confirmacao)
-
-**Dialog de Adicao/Edicao:**
-- Campos conforme tipo (socio/funcionario/terceiro)
-- Botao Salvar com validacao
-- Botao Cancelar
+**Alteracoes:**
+- Secao "Despesas com Pessoal": trocar grid de 7 colunas para 4 colunas (lg:grid-cols-4)
+- Aumentar padding interno dos cards de pessoal
+- Remover abreviacoes: "Dist. Lucros" -> "Distribuicao de Lucros"
+- Melhorar espacamento entre icone e texto
+- Garantir que valores nao fiquem comprimidos
 
 ---
 
-### 3.4 Aba 3 - Contas Bancarias
+## 6. Dashboard Administrativo - Remover Pessoas, Expandir Custos
 
-**Componente:** `src/components/company/BankAccountsTab.tsx`
+### Arquivo: `src/pages/DashboardAdministrativo.tsx`
 
-**Layout:**
+**Alteracoes:**
+- Remover completamente a secao "Indicadores de Pessoas" (linhas 232-274)
+- Remover cards de "Total de Colaboradores" e "Custo por Colaborador" dos KPIs do topo
+- Substituir por novos cards de custos operacionais detalhados:
+  - Aluguel e Infraestrutura
+  - Tecnologia e Software
+  - Energia, Agua e Utilities
+  - Material de Escritorio
+  - Manutencao e Conservacao
+  - Seguros
+  - Servicos Contabeis
+  - Marketing e Publicidade
+  - Telefonia e Internet
+  - Transporte e Logistica
 
-```text
-+----------------------------------------------------------+
-| Contas Bancarias                    [+ Nova Conta]        |
-+----------------------------------------------------------+
-| Banco     | Conta   | Saldo   | Entradas | Saidas | Acoes|
-|-----------|---------|---------|----------|--------|------|
-| BB        | 12345-6 | R$45k   | R$120k   | R$75k  | [E][X]|
-| Itau      | 98765-4 | R$28k   | R$85k    | R$57k  | [E][X]|
-+----------------------------------------------------------+
-```
-
-**Campos do formulario (Dialog):**
-| Campo | Tipo |
-|-------|------|
-| Nome do Banco | Input text |
-| Agencia do banco| Input Text |
-| Numero da Conta | Input text |
-| Saldo Atual | Input number |
-| Total de Entradas | Input number |
-| Total de Saidas | Input number |
-| Tarifas Bancarias | Input number |
-| Taxas Pagas | Input number |
-| Taxas Devidas | Input number |
-
-**Cards resumo no topo:**
-- Saldo Total (soma de todas as contas)
-- Total de Tarifas
-- Taxas Pendentes
+### Arquivo: `src/data/mockAnalyticsData.ts`
+- Expandir `operationalCosts` com as novas categorias detalhadas
+- Remover ou mover `peopleMetrics` (mover para mockPeopleData se necessario)
 
 ---
 
-### 3.5 Aba 4 - Categorias do Plano de Contas
+## 7. Dashboard Analitico - Padronizacao e Ajustes
 
-**Componente:** `src/components/company/CategoriesTab.tsx`
+### Arquivo: `src/pages/DashboardAnalitico.tsx`
 
-**Layout:**
+**Alteracoes:**
+- Unificar todos os KPIs no mesmo formato visual (remover separacao entre "Prioritarios" e "Outros KPIs")
+- Todos os cards usam o mesmo layout com Collapsible para explicacao
+- Remover secao "Receita por Funcionario" (tabela de funcionarios, linhas 364-398)
+- Adicionar secao "Receita por Produto" no lugar
 
-```text
-+----------------------------------------------------------+
-| Categorias do Plano de Contas       [+ Nova Categoria]    |
-+----------------------------------------------------------+
-| Descricao              | Tipo     | Faixa DRE    | Acoes |
-|------------------------|----------|--------------|-------|
-| Receita de Servicos    | Receita  | 3.1          | [E][X]|
-| Despesas Operacionais  | Despesa  | 4.2          | [E][X]|
-+----------------------------------------------------------+
-```
+### Arquivo: `src/data/mockAnalyticsData.ts`
+- Adicionar dados de `productRevenues` (interface similar a `ServiceLine`)
+- Produtos mockados: Consultoria, Treinamento, Assessoria, Software, Diagnostico, etc.
 
-**Campos do formulario:**
-| Campo | Tipo |
-|-------|------|
-| Descricao | Input text |
-| Tipo | Select (Receita/Despesa) |
-| Faixa no DRE | Input text |
+**Receita por Cliente e Receita por Produto:**
+- Remover limitacao de "Top 10" (exibir todos os dados)
+- Remover "Top clientes por faturamento" da descricao
+- Alterar para "Todos os clientes do periodo" e "Todos os produtos do periodo"
 
 ---
 
-### 3.6 Aba 5 - Subcontas do Plano de Contas
+## 8. Simulador de Cenarios - Expansao
 
-**Componente:** `src/components/company/SubcategoriesTab.tsx`
+### Arquivo: `src/pages/SimuladorCenarios.tsx`
+### Arquivo: `src/data/mockAnalyticsData.ts`
 
-**Layout identico ao de Categorias, com adicao de:**
-- Coluna "Categoria Pai" (Select vinculado)
+### 8.1 Simulacao de Pessoas (Expandir aba "Contratar Novo Colaborador")
 
-**Campos do formulario:**
-| Campo | Tipo |
-|-------|------|
-| Descricao | Input text |
-| Tipo | Select (Receita/Despesa) |
-| Categoria Pai | Select (lista de categorias) |
-| Faixa no DRE | Input text |
+Dividir em 3 sub-abas:
+- **Novo Socio:** Pro-labore, Comissoes, Reembolsos
+- **Novo Funcionario:** Salario, VT, VA, Beneficios, 13o (1a e 2a parcela), Ferias, FGTS (% sobre salario), INSS (% sobre salario), IR (% sobre salario)
+  - Cada item com campo de valor e percentual sobre o salario
+  - Receita esperada por mes
+- **Novo Terceiro:** Retiradas, Comissoes
 
----
+### 8.2 Simulacao de Precos (Expandir aba "Aumentar Precos")
 
-### 3.7 Aba 6 - Metas de Receita
+Adicionar lista de produtos com:
+- Nome do produto
+- Valor atual
+- Percentual de reajuste (input)
+- Valor final (calculado automaticamente)
 
-**Componente:** `src/components/company/RevenueGoalsTab.tsx`
+Campo de indices de reajuste:
+- IGPM (input %)
+- IPCA (input %)
+- Indice personalizado (input %)
 
-**Layout:**
+Botao "Aplicar indice" que preenche automaticamente o percentual de reajuste de todos os produtos.
 
-```text
-+----------------------------------------------------------+
-| Metas de Receita                    [+ Nova Meta]         |
-+----------------------------------------------------------+
-| [Card Meta Jan/2026]  [Card Meta Fev/2026]  [Card T1/2026]|
-| R$ 150.000,00         R$ 180.000,00         R$ 500.000,00 |
-| Realizado: R$ 142k    Realizado: R$ 95k     Realizado:R$380k|
-| [========95%=====]    [====53%====       ]  [====76%===   ]|
-| Status: On Track      Status: Em Risco      Status: Em Risco|
-+----------------------------------------------------------+
-```
+### 8.3 Simulacao de Perda de Cliente (Expandir aba existente)
 
-**Estrutura do Card de Meta:**
-- Titulo (periodo)
-- Valor da Meta
-- Valor Realizado
-- Progress bar com porcentagem
-- Badge de status (cores)
-- Botoes Editar/Excluir
+Adicionar detalhamento de impactos:
+- Impacto na Receita mensal e anual
+- Impacto na Margem de Contribuicao
+- Impacto no Caixa em 3, 6 e 12 meses
+- Resultado Final projetado (antes e depois)
 
-**Status e cores:**
-| Status | Cor | Condicao |
-|--------|-----|----------|
-| Alcancada | Verde | >= 100% |
-| On Track | Azul | >= 80% e < 100% |
-| Em Risco | Amarelo | >= 50% e < 80% |
-| Atrasada | Vermelho | < 50% |
-
-**Dialog de Adicao/Edicao:**
-| Campo | Tipo |
-|-------|------|
-| Periodo | Input text (ex: Jan/2026, T1/2026) |
-| Valor da Meta | Input number |
-| Valor Realizado | Input number |
+Adicionar linguagem orientada ao gestor:
+- "Ao perder este cliente, sua receita mensal cairia X%"
+- "Voce precisaria de Y novos clientes para compensar"
+- "O tempo estimado para recuperacao e de Z meses"
 
 ---
 
-## 4. Estrutura de Arquivos
+## 9. Estrutura de Arquivos
 
 ### Novos Arquivos
 ```text
 src/
   pages/
-    MinhaEmpresa.tsx               (pagina principal com abas)
+    DepartamentoPessoal.tsx
   data/
-    mockCompanyData.ts             (dados mockados)
+    mockPeopleData.ts
   components/
-    company/
-      CompanyGeneralTab.tsx        (aba dados gerais)
-      PeopleTab.tsx                (aba pessoas)
-      BankAccountsTab.tsx          (aba contas bancarias)
-      CategoriesTab.tsx            (aba categorias)
-      SubcategoriesTab.tsx         (aba subcontas)
-      RevenueGoalsTab.tsx          (aba metas)
-      SectorMetricCard.tsx         (card metricas setor)
-      GoalCard.tsx                 (card de meta individual)
+    people/
+      PeopleSummaryCards.tsx
+      PeopleTable.tsx
+      FinancialTable.tsx
+      PersonFormDialog.tsx
 ```
 
 ### Arquivos Modificados
 ```text
 src/
-  App.tsx                          (nova rota /empresa)
+  App.tsx                            (nova rota)
   components/
-    layout/
-      Sidebar.tsx                  (novo item menu)
+    layout/Sidebar.tsx               (grupo colapsavel + nova aba)
+    dashboard/KPICard.tsx            (reducao visual + explicacao)
+    home/SummaryCard.tsx             (reducao visual + explicacao)
+    home/BalanceCard.tsx             (reducao visual + explicacao)
+    home/ExecutivePanel.tsx          (reducao visual + explicacao)
+  pages/
+    Home.tsx                         (ajustes de gap)
+    DashboardFinanceiro.tsx          (layout pessoal + explicacoes)
+    DashboardAdministrativo.tsx      (remover pessoas + expandir custos)
+    DashboardAnalitico.tsx           (padronizar + produto + sem limite)
+    SimuladorCenarios.tsx            (expansao completa)
+  data/
+    mockAnalyticsData.ts             (novos dados operacionais + produtos)
+  index.css                          (ajustes globais de cards)
 ```
 
 ---
 
-## 5. Ordem de Implementacao
+## 10. Ordem de Implementacao
 
-1. **mockCompanyData.ts** - Criar dados mockados e interfaces
-2. **Sidebar.tsx** - Adicionar item de menu
-3. **App.tsx** - Adicionar rota
-4. **MinhaEmpresa.tsx** - Estrutura principal com Tabs
-5. **CompanyGeneralTab.tsx** - Aba de dados gerais
-6. **SectorMetricCard.tsx** - Cards de metricas do setor
-7. **PeopleTab.tsx** - Aba de pessoas com sub-abas
-8. **BankAccountsTab.tsx** - Aba de contas bancarias
-9. **CategoriesTab.tsx** - Aba de categorias
-10. **SubcategoriesTab.tsx** - Aba de subcontas
-11. **GoalCard.tsx** - Card individual de meta
-12. **RevenueGoalsTab.tsx** - Aba de metas de receita
-
----
-
-## 6. Padroes Visuais e UX
-
-### Consistencia com o projeto:
-- Usar `MainLayout` e `Header` existentes
-- Aplicar classes `glass-card`, `border-border`, `bg-card`
-- Usar componentes shadcn/ui (Tabs, Dialog, Table, Input, Select, Badge, Progress)
-- Icones lucide-react
-- Animacoes `animate-fade-in`
-
-### Microinteracoes:
-- Loading states em todos os formularios
-- Toast de sucesso/erro nas operacoes
-- Empty states nas tabelas vazias
-- Hover states nos cards e linhas da tabela
-- Confirmacao ao deletar registros
-
-### Validacoes:
-- Campos obrigatorios marcados com *
-- Formatacao de CNPJ e CPF
-- Valores monetarios formatados
-- Mensagens de erro em vermelho
-
----
-
-## 7. Exemplo Visual - Aba de Metas
-
-```text
-+----------------------------------------+
-| Jan/2026                    [Editar]   |
-+----------------------------------------+
-| Meta: R$ 150.000,00                    |
-| Realizado: R$ 142.500,00               |
-|                                        |
-| [================95%================]  |
-|                                        |
-| [Badge: On Track - verde]              |
-+----------------------------------------+
-```
-
----
-
-## 8. Detalhes Tecnicos
-
-### Gerenciamento de Estado:
-- useState para cada aba (dados locais)
-- Estados separados para formularios de edicao/criacao
-- Estados para controle de dialogs
-
-### Formatacao:
-- CNPJ: XX.XXX.XXX/XXXX-XX
-- CPF: XXX.XXX.XXX-XX
-- Telefone: (XX) XXXXX-XXXX
-- Moeda: R$ XX.XXX,XX
-
-### Calculo de Metricas do Setor:
-- Resultado = Receitas Totais - Despesas Totais
-- Margem de Contribuicao = (Receita - Custos Variaveis) / Receita * 100
-- Lucratividade = Lucro Liquido / Receita Total * 100
+1. **Sidebar.tsx** - Grupo colapsavel de dashboards + item Departamento Pessoal
+2. **App.tsx** - Nova rota
+3. **index.css + KPICard + SummaryCard + BalanceCard** - Ajuste visual global de cards
+4. **Cards expansiveis** - Adicionar explicacoes a todos os cards (Home, Dashboards)
+5. **mockPeopleData.ts** - Dados mockados de pessoas
+6. **Componentes people/** - Cards, tabelas, formularios
+7. **DepartamentoPessoal.tsx** - Pagina completa
+8. **DashboardFinanceiro.tsx** - Ajustes de layout pessoal
+9. **DashboardAdministrativo.tsx** - Remover pessoas, expandir custos
+10. **DashboardAnalitico.tsx** - Padronizar cards, trocar funcionario por produto
+11. **SimuladorCenarios.tsx** - Expansao de simulacoes
+12. **mockAnalyticsData.ts** - Novos dados operacionais e produtos
