@@ -1,15 +1,6 @@
 import { useState, useMemo } from 'react';
 import { 
-  Calculator, 
-  Users, 
-  TrendingUp, 
-  UserMinus,
-  ArrowRight,
-  DollarSign,
-  Target,
-  Clock,
-  RefreshCw,
-  Lightbulb,
+  Calculator, Users, TrendingUp, UserMinus, ArrowRight, DollarSign, Target, Clock, RefreshCw, Lightbulb, Briefcase, UserCheck,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -19,455 +10,387 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  scenarioTemplates,
-  calculateScenario,
-  formatCurrency,
-  formatPercentage,
-} from '@/data/mockAnalyticsData';
+import { formatCurrency } from '@/data/mockAnalyticsData';
 import { cn } from '@/lib/utils';
 
+// ===== Simulação de Pessoas =====
+interface HiringInputs {
+  type: 'socio' | 'funcionario' | 'terceiro';
+  // Sócio
+  prolabore: number;
+  comissoesSocio: number;
+  reembolsos: number;
+  // Funcionário
+  salario: number;
+  vt: number;
+  va: number;
+  beneficios: number;
+  fgtsPercent: number;
+  inssPercent: number;
+  irPercent: number;
+  receitaEsperada: number;
+  // Terceiro
+  retiradas: number;
+  comissoesTerceiro: number;
+}
+
+const defaultHiring: HiringInputs = {
+  type: 'funcionario',
+  prolabore: 10000, comissoesSocio: 2000, reembolsos: 500,
+  salario: 5000, vt: 450, va: 600, beneficios: 350,
+  fgtsPercent: 8, inssPercent: 11, irPercent: 15, receitaEsperada: 15000,
+  retiradas: 4000, comissoesTerceiro: 1500,
+};
+
+// ===== Simulação de Preços =====
+interface ProductPrice {
+  name: string;
+  currentPrice: number;
+  adjustPercent: number;
+}
+
+const defaultProducts: ProductPrice[] = [
+  { name: 'Consultoria Estratégica', currentPrice: 18000, adjustPercent: 0 },
+  { name: 'Treinamentos', currentPrice: 8500, adjustPercent: 0 },
+  { name: 'Assessoria Mensal', currentPrice: 12000, adjustPercent: 0 },
+  { name: 'Software de Gestão', currentPrice: 1500, adjustPercent: 0 },
+  { name: 'Diagnósticos', currentPrice: 8000, adjustPercent: 0 },
+  { name: 'Workshops', currentPrice: 3000, adjustPercent: 0 },
+];
+
+// ===== Simulação Perda Cliente =====
+interface ClientLossInputs {
+  clientRevenue: number;
+  directCost: number;
+  prospectionCost: number;
+  monthsToReplace: number;
+}
+
+const defaultClientLoss: ClientLossInputs = {
+  clientRevenue: 25000, directCost: 8000, prospectionCost: 5000, monthsToReplace: 3,
+};
+
+const baseValues = { cash: 45230, profit: 61940, margin: 18.5, totalRevenue: 430000 };
+
 export default function SimuladorCenarios() {
-  const [activeScenario, setActiveScenario] = useState(scenarioTemplates[0].id);
-  const [inputValues, setInputValues] = useState<Record<string, Record<string, number>>>({});
+  const [activeTab, setActiveTab] = useState('pessoas');
+  const [hiringType, setHiringType] = useState<'socio' | 'funcionario' | 'terceiro'>('funcionario');
+  const [hiring, setHiring] = useState(defaultHiring);
+  const [products, setProducts] = useState(defaultProducts);
+  const [igpm, setIgpm] = useState(4.5);
+  const [ipca, setIpca] = useState(3.8);
+  const [customIndex, setCustomIndex] = useState(5.0);
+  const [clientLoss, setClientLoss] = useState(defaultClientLoss);
 
-  const currentScenario = scenarioTemplates.find(s => s.id === activeScenario)!;
-
-  const getInputValue = (scenarioId: string, key: string, defaultValue: number) => {
-    return inputValues[scenarioId]?.[key] ?? defaultValue;
-  };
-
-  const setInputValue = (scenarioId: string, key: string, value: number) => {
-    setInputValues(prev => ({
-      ...prev,
-      [scenarioId]: {
-        ...prev[scenarioId],
-        [key]: value,
-      },
-    }));
-  };
-
-  const resetInputs = (scenarioId: string) => {
-    const scenario = scenarioTemplates.find(s => s.id === scenarioId);
-    if (scenario) {
-      const defaults: Record<string, number> = {};
-      scenario.inputs.forEach(input => {
-        defaults[input.key] = input.defaultValue;
-      });
-      setInputValues(prev => ({
-        ...prev,
-        [scenarioId]: defaults,
-      }));
+  // ===== Cálculos Pessoas =====
+  const hiringResult = useMemo(() => {
+    if (hiringType === 'socio') {
+      const totalCost = hiring.prolabore + hiring.comissoesSocio + hiring.reembolsos;
+      return { cost: totalCost, profit: -totalCost, margin: -(totalCost / baseValues.totalRevenue) * 100 };
     }
-  };
-
-  const currentInputs = useMemo(() => {
-    const inputs: Record<string, number> = {};
-    currentScenario.inputs.forEach(input => {
-      inputs[input.key] = getInputValue(currentScenario.id, input.key, input.defaultValue);
-    });
-    return inputs;
-  }, [currentScenario, inputValues]);
-
-  const result = useMemo(() => {
-    return calculateScenario(currentScenario, currentInputs);
-  }, [currentScenario, currentInputs]);
-
-  const getScenarioIcon = (type: string) => {
-    switch (type) {
-      case 'contratacao': return Users;
-      case 'preco': return TrendingUp;
-      case 'cliente': return UserMinus;
-      default: return Calculator;
+    if (hiringType === 'terceiro') {
+      const totalCost = hiring.retiradas + hiring.comissoesTerceiro;
+      return { cost: totalCost, profit: -totalCost, margin: -(totalCost / baseValues.totalRevenue) * 100 };
     }
+    const fgts = hiring.salario * (hiring.fgtsPercent / 100);
+    const inss = hiring.salario * (hiring.inssPercent / 100);
+    const ir = hiring.salario * (hiring.irPercent / 100);
+    const totalCost = hiring.salario + hiring.vt + hiring.va + hiring.beneficios + fgts + inss + ir;
+    const monthlyProfit = hiring.receitaEsperada - totalCost;
+    return { cost: totalCost, profit: monthlyProfit, margin: (monthlyProfit / baseValues.totalRevenue) * 100 };
+  }, [hiring, hiringType]);
+
+  // ===== Cálculos Preços =====
+  const priceResult = useMemo(() => {
+    const totalCurrent = products.reduce((s, p) => s + p.currentPrice, 0);
+    const totalNew = products.reduce((s, p) => s + p.currentPrice * (1 + p.adjustPercent / 100), 0);
+    const gain = totalNew - totalCurrent;
+    return { totalCurrent, totalNew, gain, profitGain: gain * 0.65, marginGain: (gain / baseValues.totalRevenue) * 100 };
+  }, [products]);
+
+  // ===== Cálculos Perda =====
+  const lossResult = useMemo(() => {
+    const monthlyMarginLoss = clientLoss.clientRevenue - clientLoss.directCost;
+    const totalLoss = monthlyMarginLoss * clientLoss.monthsToReplace + clientLoss.prospectionCost;
+    const revenuePercent = (clientLoss.clientRevenue / baseValues.totalRevenue) * 100;
+    const clientsNeeded = Math.ceil(clientLoss.clientRevenue / (baseValues.totalRevenue / 12));
+    const recoveryMonths = clientLoss.monthsToReplace + Math.ceil(clientLoss.prospectionCost / monthlyMarginLoss);
+    return {
+      monthlyMarginLoss, totalLoss, revenuePercent, clientsNeeded, recoveryMonths,
+      cash3m: -monthlyMarginLoss * 3, cash6m: -monthlyMarginLoss * 6, cash12m: -monthlyMarginLoss * 12,
+    };
+  }, [clientLoss]);
+
+  const applyIndex = (index: number) => {
+    setProducts(prev => prev.map(p => ({ ...p, adjustPercent: index })));
   };
 
-  const formatInputValue = (value: number, type: string) => {
-    switch (type) {
-      case 'currency':
-        return value.toLocaleString('pt-BR');
-      case 'percentage':
-        return value.toString();
-      default:
-        return value.toString();
-    }
+  const updateHiring = (key: keyof HiringInputs, value: number) => {
+    setHiring(prev => ({ ...prev, [key]: value }));
   };
 
-  const parseInputValue = (value: string, type: string) => {
-    const cleaned = value.replace(/[^\d,.]/g, '').replace(',', '.');
-    return parseFloat(cleaned) || 0;
-  };
+  const NumInput = ({ label, value, onChange, prefix, suffix }: { label: string; value: number; onChange: (v: number) => void; prefix?: string; suffix?: string }) => (
+    <div className="space-y-1">
+      <Label className="text-[11px]">{label}</Label>
+      <div className="relative">
+        {prefix && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">{prefix}</span>}
+        <Input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          className={cn('h-8 text-xs', prefix && 'pl-7', suffix && 'pr-7')}
+        />
+        {suffix && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">{suffix}</span>}
+      </div>
+    </div>
+  );
 
-  // Valores base para comparação
-  const baseValues = {
-    cash: 45230,
-    profit: 61940,
-    margin: 18.5,
-  };
+  const ImpactCard = ({ label, value, isPositive }: { label: string; value: string; isPositive: boolean }) => (
+    <Card className="border-border">
+      <CardContent className="pt-3 pb-3">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <p className={cn('text-lg font-bold', isPositive ? 'text-success' : 'text-destructive')}>{value}</p>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <MainLayout>
-      <Header
-        title="Simulador de Cenários"
-        subtitle="Simule decisões estratégicas sem risco operacional"
-      />
-
-      <div className="p-8 space-y-8">
-        {/* Seletor de Cenário */}
-        <Tabs value={activeScenario} onValueChange={setActiveScenario}>
+      <Header title="Simulador de Cenários" subtitle="Simule decisões estratégicas sem risco operacional" />
+      <div className="p-6 space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
-            {scenarioTemplates.map((scenario) => {
-              const Icon = getScenarioIcon(scenario.type);
-              return (
-                <TabsTrigger 
-                  key={scenario.id} 
-                  value={scenario.id}
-                  className="gap-2"
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{scenario.name}</span>
-                </TabsTrigger>
-              );
-            })}
+            <TabsTrigger value="pessoas" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Simulação de Pessoas</TabsTrigger>
+            <TabsTrigger value="precos" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" />Simulação de Preços</TabsTrigger>
+            <TabsTrigger value="cliente" className="gap-1.5 text-xs"><UserMinus className="h-3.5 w-3.5" />Perda de Cliente</TabsTrigger>
           </TabsList>
 
-          {scenarioTemplates.map((scenario) => (
-            <TabsContent key={scenario.id} value={scenario.id} className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Painel de Inputs */}
-                <Card className="lg:col-span-1 border-border">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {(() => {
-                          const Icon = getScenarioIcon(scenario.type);
-                          return <Icon className="h-5 w-5 text-primary" />;
-                        })()}
-                        <CardTitle className="text-base">{scenario.name}</CardTitle>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => resetInputs(scenario.id)}
-                        title="Resetar valores"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
+          {/* ===== PESSOAS ===== */}
+          <TabsContent value="pessoas" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <Card className="lg:col-span-1 border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium">Tipo de Contratação</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Tabs value={hiringType} onValueChange={(v) => setHiringType(v as any)}>
+                    <TabsList className="grid grid-cols-3 h-8">
+                      <TabsTrigger value="socio" className="text-[10px] h-6">Sócio</TabsTrigger>
+                      <TabsTrigger value="funcionario" className="text-[10px] h-6">Funcionário</TabsTrigger>
+                      <TabsTrigger value="terceiro" className="text-[10px] h-6">Terceiro</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+
+                  {hiringType === 'socio' && (
+                    <div className="space-y-2">
+                      <NumInput label="Pró-labore" value={hiring.prolabore} onChange={(v) => updateHiring('prolabore', v)} prefix="R$" />
+                      <NumInput label="Comissões" value={hiring.comissoesSocio} onChange={(v) => updateHiring('comissoesSocio', v)} prefix="R$" />
+                      <NumInput label="Reembolsos" value={hiring.reembolsos} onChange={(v) => updateHiring('reembolsos', v)} prefix="R$" />
                     </div>
-                    <CardDescription>{scenario.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {scenario.inputs.map((input) => (
-                      <div key={input.key} className="space-y-2">
-                        <Label htmlFor={input.key} className="text-sm">
-                          {input.label}
-                          {input.type === 'percentage' && ' (%)'}
-                        </Label>
-                        <div className="relative">
-                          {input.type === 'currency' && (
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                              R$
-                            </span>
-                          )}
-                          <Input
-                            id={input.key}
-                            type="text"
-                            value={formatInputValue(
-                              getInputValue(scenario.id, input.key, input.defaultValue),
-                              input.type
-                            )}
-                            onChange={(e) => setInputValue(
-                              scenario.id,
-                              input.key,
-                              parseInputValue(e.target.value, input.type)
-                            )}
-                            className={cn(
-                              input.type === 'currency' && 'pl-9'
-                            )}
-                          />
-                          {input.type === 'percentage' && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                              %
-                            </span>
-                          )}
-                        </div>
-                        {input.min !== undefined && input.max !== undefined && (
-                          <p className="text-xs text-muted-foreground">
-                            Faixa: {input.type === 'currency' ? formatCurrency(input.min) : input.min} 
-                            {' '}-{' '}
-                            {input.type === 'currency' ? formatCurrency(input.max) : input.max}
-                            {input.type === 'percentage' && '%'}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                {/* Painel de Resultados */}
-                <div className="lg:col-span-2 space-y-6">
-                  {/* Comparativo Antes x Depois */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Antes */}
-                    <Card className="border-border bg-muted/20">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                          Situação Atual
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Caixa</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {formatCurrency(baseValues.cash)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Lucro Mensal</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {formatCurrency(baseValues.profit)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Margem</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {baseValues.margin}%
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Depois */}
-                    <Card className={cn(
-                      'border-2',
-                      result.cashImpact >= 0 
-                        ? 'border-success/50 bg-success/5' 
-                        : 'border-destructive/50 bg-destructive/5'
-                    )}>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm font-medium text-muted-foreground">
-                            Após Cenário
-                          </CardTitle>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Caixa Projetado</span>
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              'text-sm font-medium',
-                              result.cashImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )}>
-                              {formatCurrency(baseValues.cash + result.cashImpact)}
-                            </span>
-                            <Badge variant={result.cashImpact >= 0 ? 'default' : 'destructive'}>
-                              {result.cashImpact >= 0 ? '+' : ''}{formatCurrency(result.cashImpact)}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Lucro Mensal</span>
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              'text-sm font-medium',
-                              result.profitImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )}>
-                              {formatCurrency(baseValues.profit + result.profitImpact)}
-                            </span>
-                            <Badge variant={result.profitImpact >= 0 ? 'default' : 'destructive'}>
-                              {result.profitImpact >= 0 ? '+' : ''}{formatCurrency(result.profitImpact)}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Margem</span>
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              'text-sm font-medium',
-                              result.marginImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )}>
-                              {(baseValues.margin + result.marginImpact).toFixed(1)}%
-                            </span>
-                            <Badge variant={result.marginImpact >= 0 ? 'default' : 'destructive'}>
-                              {result.marginImpact >= 0 ? '+' : ''}{result.marginImpact.toFixed(1)}%
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Cards de Impacto */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="border-border">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'flex h-12 w-12 items-center justify-center rounded-lg',
-                            result.cashImpact >= 0 ? 'bg-success/10' : 'bg-destructive/10'
-                          )}>
-                            <DollarSign className={cn(
-                              'h-6 w-6',
-                              result.cashImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )} />
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Impacto no Caixa</p>
-                            <p className={cn(
-                              'text-xl font-bold',
-                              result.cashImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )}>
-                              {result.cashImpact >= 0 ? '+' : ''}{formatCurrency(result.cashImpact)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-border">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'flex h-12 w-12 items-center justify-center rounded-lg',
-                            result.profitImpact >= 0 ? 'bg-success/10' : 'bg-destructive/10'
-                          )}>
-                            <TrendingUp className={cn(
-                              'h-6 w-6',
-                              result.profitImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )} />
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Impacto no Lucro/Mês</p>
-                            <p className={cn(
-                              'text-xl font-bold',
-                              result.profitImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )}>
-                              {result.profitImpact >= 0 ? '+' : ''}{formatCurrency(result.profitImpact)}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-border">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'flex h-12 w-12 items-center justify-center rounded-lg',
-                            result.marginImpact >= 0 ? 'bg-success/10' : 'bg-destructive/10'
-                          )}>
-                            <Target className={cn(
-                              'h-6 w-6',
-                              result.marginImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )} />
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Impacto na Margem</p>
-                            <p className={cn(
-                              'text-xl font-bold',
-                              result.marginImpact >= 0 ? 'text-success' : 'text-destructive'
-                            )}>
-                              {result.marginImpact >= 0 ? '+' : ''}{result.marginImpact.toFixed(1)}%
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Breakeven (se aplicável) */}
-                  {result.breakeven && (
-                    <Card className="border-primary/30 bg-primary/5">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                            <Clock className="h-6 w-6 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Tempo para Breakeven</p>
-                            <p className="text-xl font-bold text-primary">
-                              {result.breakeven} {result.breakeven === 1 ? 'mês' : 'meses'}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
                   )}
 
-                  {/* Insights do Cenário */}
-                  <Card className="border-border">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-2">
-                        <Lightbulb className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-base">Análise do Cenário</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {scenario.type === 'contratacao' && (
-                          <>
-                            <p className="text-sm text-muted-foreground">
-                              {result.profitImpact > 0 ? (
-                                <span className="text-success">
-                                  ✓ A contratação é financeiramente viável. O colaborador gerará retorno positivo
-                                  {result.breakeven && ` a partir do ${result.breakeven}º mês`}.
-                                </span>
-                              ) : (
-                                <span className="text-destructive">
-                                  ✗ A contratação não é viável nas condições atuais. A receita esperada não cobre os custos.
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Custo total mensal estimado: {formatCurrency(
-                                currentInputs.salary * (1 + currentInputs.charges / 100) + currentInputs.benefits
-                              )}
-                            </p>
-                          </>
-                        )}
-                        
-                        {scenario.type === 'preco' && (
-                          <>
-                            <p className="text-sm text-muted-foreground">
-                              {result.cashImpact > 0 ? (
-                                <span className="text-success">
-                                  ✓ O aumento de preços é benéfico mesmo considerando a perda estimada de clientes.
-                                </span>
-                              ) : (
-                                <span className="text-destructive">
-                                  ✗ O aumento de preços não compensa a perda de clientes estimada.
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Nova receita mensal estimada: {formatCurrency(
-                                currentInputs.currentRevenue * (1 + currentInputs.increase / 100) * (1 - currentInputs.churn / 100)
-                              )}
-                            </p>
-                          </>
-                        )}
-                        
-                        {scenario.type === 'cliente' && (
-                          <>
-                            <p className="text-sm text-muted-foreground text-destructive">
-                              ✗ A perda do cliente impactará negativamente o resultado. Considere estratégias de retenção.
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              Perda de margem líquida: {formatCurrency(
-                                currentInputs.clientRevenue - currentInputs.directCost
-                              )}/mês durante {currentInputs.monthsToReplace} meses
-                            </p>
-                          </>
-                        )}
-                      </div>
+                  {hiringType === 'funcionario' && (
+                    <div className="space-y-2">
+                      <NumInput label="Salário" value={hiring.salario} onChange={(v) => updateHiring('salario', v)} prefix="R$" />
+                      <NumInput label="Vale Transporte" value={hiring.vt} onChange={(v) => updateHiring('vt', v)} prefix="R$" />
+                      <NumInput label="Vale Alimentação" value={hiring.va} onChange={(v) => updateHiring('va', v)} prefix="R$" />
+                      <NumInput label="Benefícios" value={hiring.beneficios} onChange={(v) => updateHiring('beneficios', v)} prefix="R$" />
+                      <NumInput label="FGTS" value={hiring.fgtsPercent} onChange={(v) => updateHiring('fgtsPercent', v)} suffix="%" />
+                      <NumInput label="INSS" value={hiring.inssPercent} onChange={(v) => updateHiring('inssPercent', v)} suffix="%" />
+                      <NumInput label="IR" value={hiring.irPercent} onChange={(v) => updateHiring('irPercent', v)} suffix="%" />
+                      <NumInput label="Receita Esperada/Mês" value={hiring.receitaEsperada} onChange={(v) => updateHiring('receitaEsperada', v)} prefix="R$" />
+                    </div>
+                  )}
+
+                  {hiringType === 'terceiro' && (
+                    <div className="space-y-2">
+                      <NumInput label="Retiradas" value={hiring.retiradas} onChange={(v) => updateHiring('retiradas', v)} prefix="R$" />
+                      <NumInput label="Comissões" value={hiring.comissoesTerceiro} onChange={(v) => updateHiring('comissoesTerceiro', v)} prefix="R$" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="lg:col-span-2 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Card className="border-border bg-muted/20">
+                    <CardContent className="pt-3 pb-3 space-y-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Situação Atual</p>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Caixa</span><span className="text-foreground font-medium">{formatCurrency(baseValues.cash)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lucro Mensal</span><span className="text-foreground font-medium">{formatCurrency(baseValues.profit)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Margem</span><span className="text-foreground font-medium">{baseValues.margin}%</span></div>
+                    </CardContent>
+                  </Card>
+                  <Card className={cn('border-2', hiringResult.profit >= 0 ? 'border-success/50 bg-success/5' : 'border-destructive/50 bg-destructive/5')}>
+                    <CardContent className="pt-3 pb-3 space-y-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Após Contratação</p>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Custo Mensal</span><span className="text-destructive font-medium">{formatCurrency(hiringResult.cost)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lucro Mensal</span><span className={cn('font-medium', hiringResult.profit >= 0 ? 'text-success' : 'text-destructive')}>{formatCurrency(baseValues.profit + hiringResult.profit)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Margem</span><span className={cn('font-medium', hiringResult.margin >= 0 ? 'text-success' : 'text-destructive')}>{(baseValues.margin + hiringResult.margin).toFixed(1)}%</span></div>
                     </CardContent>
                   </Card>
                 </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <ImpactCard label="Impacto no Caixa" value={`${hiringResult.profit >= 0 ? '+' : ''}${formatCurrency(hiringResult.profit * 12)}`} isPositive={hiringResult.profit >= 0} />
+                  <ImpactCard label="Impacto no Lucro/Mês" value={`${hiringResult.profit >= 0 ? '+' : ''}${formatCurrency(hiringResult.profit)}`} isPositive={hiringResult.profit >= 0} />
+                  <ImpactCard label="Impacto na Margem" value={`${hiringResult.margin >= 0 ? '+' : ''}${hiringResult.margin.toFixed(1)}%`} isPositive={hiringResult.margin >= 0} />
+                </div>
+                {hiringType === 'funcionario' && (
+                  <Card className="border-border">
+                    <CardContent className="pt-3 pb-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lightbulb className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-medium">Análise</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {hiringResult.profit > 0 ? (
+                          <span className="text-success">✓ A contratação é viável. Retorno positivo de {formatCurrency(hiringResult.profit)}/mês após custos totais de {formatCurrency(hiringResult.cost)}/mês.</span>
+                        ) : (
+                          <span className="text-destructive">✗ A contratação gera prejuízo de {formatCurrency(Math.abs(hiringResult.profit))}/mês. Aumente a receita esperada ou reduza custos.</span>
+                        )}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-            </TabsContent>
-          ))}
+            </div>
+          </TabsContent>
+
+          {/* ===== PREÇOS ===== */}
+          <TabsContent value="precos" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <Card className="lg:col-span-1 border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium">Índices de Reajuste</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <NumInput label="IGPM" value={igpm} onChange={setIgpm} suffix="%" />
+                  <NumInput label="IPCA" value={ipca} onChange={setIpca} suffix="%" />
+                  <NumInput label="Índice Personalizado" value={customIndex} onChange={setCustomIndex} suffix="%" />
+                  <div className="flex gap-1.5 flex-wrap">
+                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(igpm)}>Aplicar IGPM</Button>
+                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(ipca)}>Aplicar IPCA</Button>
+                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(customIndex)}>Personalizado</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="lg:col-span-2 space-y-4">
+                <Card className="border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-medium">Produtos e Reajustes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">Produto</th>
+                          <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Valor Atual</th>
+                          <th className="text-center py-1.5 px-2 text-muted-foreground font-medium">Reajuste %</th>
+                          <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Valor Final</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map((p, i) => (
+                          <tr key={i} className="border-b border-border/50">
+                            <td className="py-1.5 px-2 text-foreground">{p.name}</td>
+                            <td className="py-1.5 px-2 text-right text-muted-foreground">{formatCurrency(p.currentPrice)}</td>
+                            <td className="py-1.5 px-2 text-center">
+                              <Input
+                                type="number"
+                                value={p.adjustPercent}
+                                onChange={(e) => {
+                                  const newProducts = [...products];
+                                  newProducts[i].adjustPercent = parseFloat(e.target.value) || 0;
+                                  setProducts(newProducts);
+                                }}
+                                className="h-6 w-16 text-[11px] text-center mx-auto"
+                              />
+                            </td>
+                            <td className="py-1.5 px-2 text-right font-medium text-foreground">
+                              {formatCurrency(p.currentPrice * (1 + p.adjustPercent / 100))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+                <div className="grid grid-cols-3 gap-3">
+                  <ImpactCard label="Ganho de Receita" value={`+${formatCurrency(priceResult.gain)}`} isPositive={priceResult.gain > 0} />
+                  <ImpactCard label="Impacto no Lucro" value={`+${formatCurrency(priceResult.profitGain)}`} isPositive={priceResult.profitGain > 0} />
+                  <ImpactCard label="Impacto na Margem" value={`+${priceResult.marginGain.toFixed(1)}%`} isPositive={priceResult.marginGain > 0} />
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* ===== PERDA CLIENTE ===== */}
+          <TabsContent value="cliente" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <Card className="lg:col-span-1 border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs font-medium">Dados do Cliente</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <NumInput label="Receita Mensal do Cliente" value={clientLoss.clientRevenue} onChange={(v) => setClientLoss(p => ({ ...p, clientRevenue: v }))} prefix="R$" />
+                  <NumInput label="Custo Direto Associado" value={clientLoss.directCost} onChange={(v) => setClientLoss(p => ({ ...p, directCost: v }))} prefix="R$" />
+                  <NumInput label="Custo de Prospecção (Novo)" value={clientLoss.prospectionCost} onChange={(v) => setClientLoss(p => ({ ...p, prospectionCost: v }))} prefix="R$" />
+                  <NumInput label="Meses para Substituir" value={clientLoss.monthsToReplace} onChange={(v) => setClientLoss(p => ({ ...p, monthsToReplace: v }))} />
+                </CardContent>
+              </Card>
+
+              <div className="lg:col-span-2 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Card className="border-border bg-muted/20">
+                    <CardContent className="pt-3 pb-3 space-y-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Situação Atual</p>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Receita Mensal</span><span className="font-medium">{formatCurrency(baseValues.totalRevenue)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lucro Mensal</span><span className="font-medium">{formatCurrency(baseValues.profit)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Margem</span><span className="font-medium">{baseValues.margin}%</span></div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-2 border-destructive/50 bg-destructive/5">
+                    <CardContent className="pt-3 pb-3 space-y-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">Após Perda do Cliente</p>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Receita Mensal</span><span className="text-destructive font-medium">{formatCurrency(baseValues.totalRevenue - clientLoss.clientRevenue)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lucro Mensal</span><span className="text-destructive font-medium">{formatCurrency(baseValues.profit - lossResult.monthlyMarginLoss)}</span></div>
+                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Impacto Total</span><span className="text-destructive font-medium">{formatCurrency(-lossResult.totalLoss)}</span></div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <ImpactCard label="Impacto em 3 meses" value={formatCurrency(lossResult.cash3m)} isPositive={false} />
+                  <ImpactCard label="Impacto em 6 meses" value={formatCurrency(lossResult.cash6m)} isPositive={false} />
+                  <ImpactCard label="Impacto em 12 meses" value={formatCurrency(lossResult.cash12m)} isPositive={false} />
+                </div>
+
+                <Card className="border-destructive/30 bg-destructive/5">
+                  <CardContent className="pt-3 pb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lightbulb className="h-4 w-4 text-destructive" />
+                      <span className="text-xs font-medium text-foreground">Análise de Impacto</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] text-muted-foreground">
+                        • Ao perder este cliente, sua receita mensal cairia <span className="text-destructive font-medium">{lossResult.revenuePercent.toFixed(1)}%</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        • Perda de margem de contribuição: <span className="text-destructive font-medium">{formatCurrency(lossResult.monthlyMarginLoss)}/mês</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        • Você precisaria de aproximadamente <span className="text-primary font-medium">{lossResult.clientsNeeded} novos clientes</span> para compensar
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        • O tempo estimado para recuperação é de <span className="text-warning font-medium">{lossResult.recoveryMonths} meses</span>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </MainLayout>

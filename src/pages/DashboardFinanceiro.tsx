@@ -1,12 +1,11 @@
-import { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, CreditCard, Calculator, Calendar, Users, Briefcase, Gift, Bus, Award, Umbrella } from 'lucide-react';
+import { useState } from 'react';
+import { DashboardFinanceiroKPIs } from '@/components/dashboard/DashboardFinanceiroKPIs';
+import { DashboardFinanceiroPessoal } from '@/components/dashboard/DashboardFinanceiroPessoal';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
-import { KPICard } from '@/components/dashboard/KPICard';
-import { InsightCard } from '@/components/dashboard/InsightCard';
 import { SpendingChart } from '@/components/dashboard/SpendingChart';
 import { TrendChart } from '@/components/dashboard/TrendChart';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { InsightCard } from '@/components/dashboard/InsightCard';
 import {
   transactions,
   calculateMetrics,
@@ -14,7 +13,8 @@ import {
   getDailyTrend,
   generateInsights,
 } from '@/data/mockData';
-import { getPayrollSummary, formatCurrency as formatCurrencyAnalytics } from '@/data/mockAnalyticsData';
+import { getPayrollSummary } from '@/data/mockAnalyticsData';
+import { useMemo } from 'react';
 
 export default function DashboardFinanceiro() {
   const [period, setPeriod] = useState('30');
@@ -22,17 +22,14 @@ export default function DashboardFinanceiro() {
 
   const filteredTransactions = useMemo(() => {
     let data = transactions;
-    
     if (period !== 'all') {
       const days = parseInt(period);
       const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       data = data.filter((t) => new Date(t.date) >= startDate);
     }
-    
     if (category !== 'all') {
       data = data.filter((t) => t.category === category);
     }
-    
     return data;
   }, [period, category]);
 
@@ -52,14 +49,10 @@ export default function DashboardFinanceiro() {
   }, [filteredTransactions, period]);
 
   const insights = useMemo(() => generateInsights(transactions), []);
-
   const payrollSummary = useMemo(() => getPayrollSummary(), []);
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   return (
     <MainLayout>
@@ -72,137 +65,18 @@ export default function DashboardFinanceiro() {
         category={category}
         onCategoryChange={setCategory}
       />
+      <div className="p-6 space-y-6">
+        <DashboardFinanceiroKPIs metrics={metrics} formatCurrency={formatCurrency} />
+        <DashboardFinanceiroPessoal payrollSummary={payrollSummary} formatCurrency={formatCurrency} />
 
-      <div className="p-8 space-y-8">
-        {/* KPIs Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <KPICard
-            title="Total de Entradas"
-            value={formatCurrency(metrics.totalEntradas)}
-            icon={<TrendingUp className="h-5 w-5 text-success" />}
-            variant="positive"
-            trend="up"
-            trendValue="+12.5% vs anterior"
-          />
-          <KPICard
-            title="Total de Saídas"
-            value={formatCurrency(metrics.totalSaidas)}
-            icon={<TrendingDown className="h-5 w-5 text-destructive" />}
-            variant="negative"
-            trend="down"
-            trendValue="-3.2% vs anterior"
-          />
-          <KPICard
-            title="Resultado"
-            value={formatCurrency(metrics.resultado)}
-            subtitle={`${metrics.resultado >= 0 ? '+' : ''}${metrics.totalEntradas > 0 ? ((metrics.resultado / metrics.totalEntradas) * 100).toFixed(1) : 0}% de margem`}
-            icon={<DollarSign className="h-5 w-5 text-primary" />}
-            variant={metrics.resultado >= 0 ? 'positive' : 'negative'}
-            trend={metrics.resultado >= 0 ? 'up' : 'down'}
-          />
-          <KPICard
-            title="Gasto Médio Diário"
-            value={formatCurrency(metrics.gastoMedioDiario)}
-            icon={<Calendar className="h-5 w-5 text-primary" />}
-          />
-          <KPICard
-            title="Gasto Médio Mensal"
-            value={formatCurrency(metrics.gastoMedioMensal)}
-            icon={<CreditCard className="h-5 w-5 text-primary" />}
-          />
-          <KPICard
-            title="Gasto Médio Anual"
-            value={formatCurrency(metrics.gastoMedioAnual)}
-            icon={<Calculator className="h-5 w-5 text-primary" />}
-          />
-        </div>
-
-        {/* Cards de Folha de Pagamento */}
-        <div>
-          <h3 className="mb-4 text-lg font-medium text-foreground">Despesas com Pessoal</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
-            <Card className="bg-card border-border hover:border-primary/30 transition-all">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">Pró-labore</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.prolabore)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-card border-border hover:border-primary/30 transition-all">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-success" />
-                  <span className="text-xs text-muted-foreground">Dist. Lucros</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.distribuicao)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-card border-border hover:border-primary/30 transition-all">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Award className="h-4 w-4 text-warning" />
-                  <span className="text-xs text-muted-foreground">Comissões</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.comissoes)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-card border-border hover:border-primary/30 transition-all">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Briefcase className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">Salários</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.salarios)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-card border-border hover:border-primary/30 transition-all">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Bus className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Vale Transporte</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.vt)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-card border-border hover:border-primary/30 transition-all">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Gift className="h-4 w-4 text-success" />
-                  <span className="text-xs text-muted-foreground">13º Salário</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.decimo)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-card border-border hover:border-primary/30 transition-all">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Umbrella className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">Férias</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{formatCurrency(payrollSummary.ferias)}</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <TrendChart data={dailyTrend} />
           <SpendingChart data={spendingByCategory} />
         </div>
 
-        {/* Insights Row */}
         <div>
-          <h3 className="mb-4 text-lg font-medium text-foreground">Insights Automáticos</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <h3 className="mb-3 text-sm font-medium text-foreground">Insights Automáticos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {insights.map((insight, index) => (
               <InsightCard
                 key={index}
