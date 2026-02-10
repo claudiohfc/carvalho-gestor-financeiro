@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Receipt,
   FileText,
-  PlusCircle,
   Users,
   Upload,
   User,
@@ -18,6 +17,8 @@ import {
   Calculator,
   Settings,
   Briefcase,
+  Tag,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,10 +45,11 @@ const afterDashboardItems = [
   { to: '/dre', icon: FileText, label: 'DRE Gerencial' },
   { to: '/simulador', icon: Calculator, label: 'Simulador de Cenários' },
   { to: '/conciliacao', icon: Scale, label: 'Conciliação Bancária' },
+  { to: '/precificacao', icon: Tag, label: 'Precificação de Produtos e Serviços' },
   { to: '/registros', icon: FileText, label: 'Meus Registros' },
-  { to: '/lancamentos', icon: PlusCircle, label: 'Lançamentos' },
   { to: '/cadastros', icon: Users, label: 'Clientes e Fornecedores' },
   { to: '/importacao', icon: Upload, label: 'Importação de Dados' },
+  { to: '/assistente-ia', icon: Bot, label: 'Assistente de IA' },
 ];
 
 export function Sidebar() {

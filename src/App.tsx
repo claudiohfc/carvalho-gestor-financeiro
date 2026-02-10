@@ -11,8 +11,9 @@ import DashboardAnalitico from "./pages/DashboardAnalitico";
 import DREGerencial from "./pages/DREGerencial";
 import SimuladorCenarios from "./pages/SimuladorCenarios";
 import MeusRegistros from "./pages/MeusRegistros";
-import Lancamentos from "./pages/Lancamentos";
 import Cadastros from "./pages/Cadastros";
+import Precificacao from "./pages/Precificacao";
+import AssistenteIA from "./pages/AssistenteIA";
 import Importacao from "./pages/Importacao";
 import ConciliacaoBancaria from "./pages/ConciliacaoBancaria";
 import DepartamentoPessoal from "./pages/DepartamentoPessoal";
@@ -36,8 +37,9 @@ const App = () => (
           <Route path="/dre" element={<DREGerencial />} />
           <Route path="/simulador" element={<SimuladorCenarios />} />
           <Route path="/registros" element={<MeusRegistros />} />
-          <Route path="/lancamentos" element={<Lancamentos />} />
           <Route path="/cadastros" element={<Cadastros />} />
+          <Route path="/precificacao" element={<Precificacao />} />
+          <Route path="/assistente-ia" element={<AssistenteIA />} />
           <Route path="/importacao" element={<Importacao />} />
           <Route path="/conciliacao" element={<ConciliacaoBancaria />} />
           <Route path="/departamento-pessoal" element={<DepartamentoPessoal />} />
