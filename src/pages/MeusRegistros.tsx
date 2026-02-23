@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Plus, Eye, Pencil, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Search } from 'lucide-react';
+import { RegistroFormDialog } from '@/components/registros/RegistroFormDialog';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -136,12 +137,15 @@ export default function MeusRegistros() {
               </SelectContent>
             </Select>
           </div>
-          <Button className="bg-primary hover:bg-primary/90" asChild>
-            <a href="/lancamentos">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Registro
-            </a>
-          </Button>
+          <div className="flex gap-2">
+            <RegistroFormDialog onAdd={(tx) => setData(prev => [tx, ...prev])} />
+            <Button className="bg-primary hover:bg-primary/90" asChild>
+              <a href="/lancamentos">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Registro
+              </a>
+            </Button>
+          </div>
         </div>
 
         {/* Table */}
