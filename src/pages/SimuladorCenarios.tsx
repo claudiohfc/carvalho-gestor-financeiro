@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { 
-  Calculator, Users, TrendingUp, UserMinus, ArrowRight, DollarSign, Target, Clock, RefreshCw, Lightbulb, Briefcase, UserCheck,
+  Calculator, Users, TrendingUp, ArrowRight, DollarSign, Target, Clock, RefreshCw, Lightbulb, Briefcase, UserCheck, Shuffle, Plus, Trash2,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -16,11 +16,9 @@ import { cn } from '@/lib/utils';
 // ===== Simulação de Pessoas =====
 interface HiringInputs {
   type: 'socio' | 'funcionario' | 'terceiro';
-  // Sócio
   prolabore: number;
   comissoesSocio: number;
   reembolsos: number;
-  // Funcionário
   salario: number;
   vt: number;
   va: number;
@@ -29,7 +27,6 @@ interface HiringInputs {
   inssPercent: number;
   irPercent: number;
   receitaEsperada: number;
-  // Terceiro
   retiradas: number;
   comissoesTerceiro: number;
 }
@@ -49,6 +46,12 @@ interface ProductPrice {
   adjustPercent: number;
 }
 
+interface CustomIndex {
+  id: string;
+  name: string;
+  value: number;
+}
+
 const defaultProducts: ProductPrice[] = [
   { name: 'Consultoria Estratégica', currentPrice: 18000, adjustPercent: 0 },
   { name: 'Treinamentos', currentPrice: 8500, adjustPercent: 0 },
@@ -58,18 +61,6 @@ const defaultProducts: ProductPrice[] = [
   { name: 'Workshops', currentPrice: 3000, adjustPercent: 0 },
 ];
 
-// ===== Simulação Perda Cliente =====
-interface ClientLossInputs {
-  clientRevenue: number;
-  directCost: number;
-  prospectionCost: number;
-  monthsToReplace: number;
-}
-
-const defaultClientLoss: ClientLossInputs = {
-  clientRevenue: 25000, directCost: 8000, prospectionCost: 5000, monthsToReplace: 3,
-};
-
 const baseValues = { cash: 45230, profit: 61940, margin: 18.5, totalRevenue: 430000 };
 
 export default function SimuladorCenarios() {
@@ -77,10 +68,23 @@ export default function SimuladorCenarios() {
   const [hiringType, setHiringType] = useState<'socio' | 'funcionario' | 'terceiro'>('funcionario');
   const [hiring, setHiring] = useState(defaultHiring);
   const [products, setProducts] = useState(defaultProducts);
+  
+  // Market indices
   const [igpm, setIgpm] = useState(4.5);
   const [ipca, setIpca] = useState(3.8);
-  const [customIndex, setCustomIndex] = useState(5.0);
-  const [clientLoss, setClientLoss] = useState(defaultClientLoss);
+  const [inpc, setInpc] = useState(3.5);
+  const [igpdi, setIgpdi] = useState(4.2);
+  const [selic, setSelic] = useState(10.5);
+  const [cdi, setCdi] = useState(10.4);
+
+  // Random values
+  const [randomMin, setRandomMin] = useState(2.0);
+  const [randomMax, setRandomMax] = useState(8.0);
+
+  // Custom indices
+  const [customIndices, setCustomIndices] = useState<CustomIndex[]>([]);
+  const [newIndexName, setNewIndexName] = useState('');
+  const [newIndexValue, setNewIndexValue] = useState('');
 
   // ===== Cálculos Pessoas =====
   const hiringResult = useMemo(() => {
@@ -108,21 +112,30 @@ export default function SimuladorCenarios() {
     return { totalCurrent, totalNew, gain, profitGain: gain * 0.65, marginGain: (gain / baseValues.totalRevenue) * 100 };
   }, [products]);
 
-  // ===== Cálculos Perda =====
-  const lossResult = useMemo(() => {
-    const monthlyMarginLoss = clientLoss.clientRevenue - clientLoss.directCost;
-    const totalLoss = monthlyMarginLoss * clientLoss.monthsToReplace + clientLoss.prospectionCost;
-    const revenuePercent = (clientLoss.clientRevenue / baseValues.totalRevenue) * 100;
-    const clientsNeeded = Math.ceil(clientLoss.clientRevenue / (baseValues.totalRevenue / 12));
-    const recoveryMonths = clientLoss.monthsToReplace + Math.ceil(clientLoss.prospectionCost / monthlyMarginLoss);
-    return {
-      monthlyMarginLoss, totalLoss, revenuePercent, clientsNeeded, recoveryMonths,
-      cash3m: -monthlyMarginLoss * 3, cash6m: -monthlyMarginLoss * 6, cash12m: -monthlyMarginLoss * 12,
-    };
-  }, [clientLoss]);
-
   const applyIndex = (index: number) => {
     setProducts(prev => prev.map(p => ({ ...p, adjustPercent: index })));
+  };
+
+  const applyRandom = () => {
+    setProducts(prev => prev.map(p => ({
+      ...p,
+      adjustPercent: Math.round((randomMin + Math.random() * (randomMax - randomMin)) * 100) / 100,
+    })));
+  };
+
+  const addCustomIndex = () => {
+    if (!newIndexName.trim() || !newIndexValue) return;
+    setCustomIndices(prev => [...prev, {
+      id: `ci-${Date.now()}`,
+      name: newIndexName.trim(),
+      value: parseFloat(newIndexValue) || 0,
+    }]);
+    setNewIndexName('');
+    setNewIndexValue('');
+  };
+
+  const removeCustomIndex = (id: string) => {
+    setCustomIndices(prev => prev.filter(ci => ci.id !== id));
   };
 
   const updateHiring = (key: keyof HiringInputs, value: number) => {
@@ -159,10 +172,9 @@ export default function SimuladorCenarios() {
       <Header title="Simulador de Cenários" subtitle="Simule decisões estratégicas sem risco operacional" />
       <div className="p-6 space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-flex">
             <TabsTrigger value="pessoas" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Simulação de Pessoas</TabsTrigger>
             <TabsTrigger value="precos" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" />Simulação de Preços</TabsTrigger>
-            <TabsTrigger value="cliente" className="gap-1.5 text-xs"><UserMinus className="h-3.5 w-3.5" />Perda de Cliente</TabsTrigger>
           </TabsList>
 
           {/* ===== PESSOAS ===== */}
@@ -259,22 +271,101 @@ export default function SimuladorCenarios() {
           {/* ===== PREÇOS ===== */}
           <TabsContent value="precos" className="mt-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <Card className="lg:col-span-1 border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-medium">Índices de Reajuste</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <NumInput label="IGPM" value={igpm} onChange={setIgpm} suffix="%" />
-                  <NumInput label="IPCA" value={ipca} onChange={setIpca} suffix="%" />
-                  <NumInput label="Índice Personalizado" value={customIndex} onChange={setCustomIndex} suffix="%" />
-                  <div className="flex gap-1.5 flex-wrap">
-                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(igpm)}>Aplicar IGPM</Button>
-                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(ipca)}>Aplicar IPCA</Button>
-                    <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(customIndex)}>Personalizado</Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Painel lateral de índices */}
+              <div className="lg:col-span-1 space-y-4">
+                {/* Índices de Mercado */}
+                <Card className="border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-medium">Índices de Mercado</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <NumInput label="IGPM" value={igpm} onChange={setIgpm} suffix="%" />
+                    <NumInput label="IPCA" value={ipca} onChange={setIpca} suffix="%" />
+                    <NumInput label="INPC" value={inpc} onChange={setInpc} suffix="%" />
+                    <NumInput label="IGP-DI" value={igpdi} onChange={setIgpdi} suffix="%" />
+                    <NumInput label="Selic" value={selic} onChange={setSelic} suffix="%" />
+                    <NumInput label="CDI" value={cdi} onChange={setCdi} suffix="%" />
+                    <div className="flex gap-1.5 flex-wrap pt-1">
+                      <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(igpm)}>Aplicar IGPM</Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(ipca)}>Aplicar IPCA</Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(inpc)}>Aplicar INPC</Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(igpdi)}>Aplicar IGP-DI</Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(selic)}>Aplicar Selic</Button>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => applyIndex(cdi)}>Aplicar CDI</Button>
+                    </div>
+                  </CardContent>
+                </Card>
 
+                {/* Valores Aleatórios */}
+                <Card className="border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-medium flex items-center gap-1.5">
+                      <Shuffle className="h-3.5 w-3.5" /> Valores Aleatórios
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <NumInput label="Mínimo %" value={randomMin} onChange={setRandomMin} suffix="%" />
+                      <NumInput label="Máximo %" value={randomMax} onChange={setRandomMax} suffix="%" />
+                    </div>
+                    <Button size="sm" variant="outline" className="w-full h-7 text-[10px]" onClick={applyRandom}>
+                      <Shuffle className="h-3 w-3 mr-1" /> Aplicar Aleatório
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Índice Personalizado */}
+                <Card className="border-border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-medium">Criar Índice Personalizado</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Nome do Índice</Label>
+                      <Input
+                        value={newIndexName}
+                        onChange={(e) => setNewIndexName(e.target.value)}
+                        className="h-8 text-xs"
+                        placeholder="Ex: Reajuste Contratual"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Percentual (%)</Label>
+                      <Input
+                        type="number"
+                        value={newIndexValue}
+                        onChange={(e) => setNewIndexValue(e.target.value)}
+                        className="h-8 text-xs"
+                        placeholder="0"
+                      />
+                    </div>
+                    <Button size="sm" className="w-full h-7 text-[10px]" onClick={addCustomIndex} disabled={!newIndexName.trim() || !newIndexValue}>
+                      <Plus className="h-3 w-3 mr-1" /> Adicionar Índice
+                    </Button>
+
+                    {customIndices.length > 0 && (
+                      <div className="space-y-1.5 pt-2 border-t border-border">
+                        {customIndices.map((ci) => (
+                          <div key={ci.id} className="flex items-center justify-between gap-1 text-xs bg-muted/30 rounded px-2 py-1.5">
+                            <span className="text-foreground font-medium truncate">{ci.name}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Badge variant="secondary" className="text-[10px]">{ci.value}%</Badge>
+                              <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => applyIndex(ci.value)}>
+                                <TrendingUp className="h-3 w-3 text-primary" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={() => removeCustomIndex(ci.id)}>
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tabela de produtos e resultados */}
               <div className="lg:col-span-2 space-y-4">
                 <Card className="border-border">
                   <CardHeader className="pb-2">
@@ -313,6 +404,14 @@ export default function SimuladorCenarios() {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot>
+                        <tr className="bg-muted/30">
+                          <td className="py-1.5 px-2 font-bold text-foreground">Total</td>
+                          <td className="py-1.5 px-2 text-right font-medium text-muted-foreground">{formatCurrency(priceResult.totalCurrent)}</td>
+                          <td></td>
+                          <td className="py-1.5 px-2 text-right font-bold text-primary">{formatCurrency(priceResult.totalNew)}</td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </CardContent>
                 </Card>
@@ -321,73 +420,6 @@ export default function SimuladorCenarios() {
                   <ImpactCard label="Impacto no Lucro" value={`+${formatCurrency(priceResult.profitGain)}`} isPositive={priceResult.profitGain > 0} />
                   <ImpactCard label="Impacto na Margem" value={`+${priceResult.marginGain.toFixed(1)}%`} isPositive={priceResult.marginGain > 0} />
                 </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* ===== PERDA CLIENTE ===== */}
-          <TabsContent value="cliente" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <Card className="lg:col-span-1 border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs font-medium">Dados do Cliente</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <NumInput label="Receita Mensal do Cliente" value={clientLoss.clientRevenue} onChange={(v) => setClientLoss(p => ({ ...p, clientRevenue: v }))} prefix="R$" />
-                  <NumInput label="Custo Direto Associado" value={clientLoss.directCost} onChange={(v) => setClientLoss(p => ({ ...p, directCost: v }))} prefix="R$" />
-                  <NumInput label="Custo de Prospecção (Novo)" value={clientLoss.prospectionCost} onChange={(v) => setClientLoss(p => ({ ...p, prospectionCost: v }))} prefix="R$" />
-                  <NumInput label="Meses para Substituir" value={clientLoss.monthsToReplace} onChange={(v) => setClientLoss(p => ({ ...p, monthsToReplace: v }))} />
-                </CardContent>
-              </Card>
-
-              <div className="lg:col-span-2 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Card className="border-border bg-muted/20">
-                    <CardContent className="pt-3 pb-3 space-y-2">
-                      <p className="text-[11px] font-medium text-muted-foreground">Situação Atual</p>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Receita Mensal</span><span className="font-medium">{formatCurrency(baseValues.totalRevenue)}</span></div>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lucro Mensal</span><span className="font-medium">{formatCurrency(baseValues.profit)}</span></div>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Margem</span><span className="font-medium">{baseValues.margin}%</span></div>
-                    </CardContent>
-                  </Card>
-                  <Card className="border-2 border-destructive/50 bg-destructive/5">
-                    <CardContent className="pt-3 pb-3 space-y-2">
-                      <p className="text-[11px] font-medium text-muted-foreground">Após Perda do Cliente</p>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Receita Mensal</span><span className="text-destructive font-medium">{formatCurrency(baseValues.totalRevenue - clientLoss.clientRevenue)}</span></div>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Lucro Mensal</span><span className="text-destructive font-medium">{formatCurrency(baseValues.profit - lossResult.monthlyMarginLoss)}</span></div>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Impacto Total</span><span className="text-destructive font-medium">{formatCurrency(-lossResult.totalLoss)}</span></div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <ImpactCard label="Impacto em 3 meses" value={formatCurrency(lossResult.cash3m)} isPositive={false} />
-                  <ImpactCard label="Impacto em 6 meses" value={formatCurrency(lossResult.cash6m)} isPositive={false} />
-                  <ImpactCard label="Impacto em 12 meses" value={formatCurrency(lossResult.cash12m)} isPositive={false} />
-                </div>
-
-                <Card className="border-destructive/30 bg-destructive/5">
-                  <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Lightbulb className="h-4 w-4 text-destructive" />
-                      <span className="text-xs font-medium text-foreground">Análise de Impacto</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] text-muted-foreground">
-                        • Ao perder este cliente, sua receita mensal cairia <span className="text-destructive font-medium">{lossResult.revenuePercent.toFixed(1)}%</span>
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        • Perda de margem de contribuição: <span className="text-destructive font-medium">{formatCurrency(lossResult.monthlyMarginLoss)}/mês</span>
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        • Você precisaria de aproximadamente <span className="text-primary font-medium">{lossResult.clientsNeeded} novos clientes</span> para compensar
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        • O tempo estimado para recuperação é de <span className="text-warning font-medium">{lossResult.recoveryMonths} meses</span>
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </div>
           </TabsContent>

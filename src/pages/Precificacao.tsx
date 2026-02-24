@@ -67,15 +67,24 @@ export default function Precificacao() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-xs">Código</TableHead>
-            <TableHead className="text-xs">Nome</TableHead>
-            <TableHead className="text-xs">Categoria</TableHead>
-            <TableHead className="text-xs text-right">Custo Base</TableHead>
-            <TableHead className="text-xs text-right">Margem</TableHead>
-            <TableHead className="text-xs text-right">Markup</TableHead>
-            <TableHead className="text-xs text-right">Impostos</TableHead>
-            <TableHead className="text-xs text-right font-semibold">Preço Final</TableHead>
-            <TableHead className="text-xs text-center">Ações</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">Código</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">Categoria</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">Nome</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">Descrição</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">Unidade</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">C. Fixos</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">C. Variáveis</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">Tempo Prep.</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">Valor Hora</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">M.O. (%)</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">M.O. (R$)</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">Margem</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">Markup</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">Custo Base</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">Impostos</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap">Vlr Imposto</TableHead>
+            <TableHead className="text-xs text-right whitespace-nowrap font-semibold">Preço Final</TableHead>
+            <TableHead className="text-xs text-center whitespace-nowrap">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,14 +93,23 @@ export default function Precificacao() {
               <>
                 <CollapsibleTrigger asChild>
                   <TableRow className="cursor-pointer hover:bg-muted/50 transition-colors">
-                    <TableCell className="text-xs font-mono">{item.code}</TableCell>
-                    <TableCell className="text-xs font-medium">{item.name}</TableCell>
-                    <TableCell><Badge variant="secondary" className="text-[10px]">{item.category}</Badge></TableCell>
-                    <TableCell className="text-xs text-right">{formatCurrency(item.baseValue)}</TableCell>
-                    <TableCell className="text-xs text-right text-primary font-medium">{item.profitMargin}%</TableCell>
-                    <TableCell className="text-xs text-right font-medium">{item.markup.toFixed(1)}%</TableCell>
-                    <TableCell className="text-xs text-right">{formatCurrency(item.totalTax)}</TableCell>
-                    <TableCell className="text-xs text-right font-bold text-primary">{formatCurrency(item.finalPrice)}</TableCell>
+                    <TableCell className="text-xs font-mono whitespace-nowrap">{item.code}</TableCell>
+                    <TableCell><Badge variant="secondary" className="text-[10px] whitespace-nowrap">{item.category}</Badge></TableCell>
+                    <TableCell className="text-xs font-medium whitespace-nowrap">{item.name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">{item.description}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{item.unit}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.fixedCosts)}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.variableCosts)}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{item.prepTime}h</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.hourRate)}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{item.laborPercent}%</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.laborValue)}</TableCell>
+                    <TableCell className="text-xs text-right text-primary font-medium whitespace-nowrap">{item.profitMargin}%</TableCell>
+                    <TableCell className="text-xs text-right font-medium whitespace-nowrap">{item.markup.toFixed(1)}%</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.baseValue)}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{item.taxes.map(t => t.type).join(', ')}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.totalTax)}</TableCell>
+                    <TableCell className="text-xs text-right font-bold text-primary whitespace-nowrap">{formatCurrency(item.finalPrice)}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setExpandedRow(expandedRow === item.id ? null : item.id); }}>
@@ -110,45 +128,35 @@ export default function Precificacao() {
                 </CollapsibleTrigger>
                 <CollapsibleContent asChild>
                   <TableRow className="bg-muted/20">
-                    <TableCell colSpan={9} className="p-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
-                        <div><span className="text-muted-foreground">Descrição:</span><p className="font-medium mt-0.5">{item.description}</p></div>
-                        <div><span className="text-muted-foreground">Unidade:</span><p className="font-medium mt-0.5">{item.unit}</p></div>
-                        <div><span className="text-muted-foreground">Custos Fixos:</span><p className="font-medium mt-0.5">{formatCurrency(item.fixedCosts)}</p></div>
-                        <div><span className="text-muted-foreground">Custos Variáveis:</span><p className="font-medium mt-0.5">{formatCurrency(item.variableCosts)}</p></div>
-                        <div><span className="text-muted-foreground">Tempo de Preparação:</span><p className="font-medium mt-0.5">{item.prepTime}h</p></div>
-                        <div><span className="text-muted-foreground">Valor da Hora:</span><p className="font-medium mt-0.5">{formatCurrency(item.hourRate)}</p></div>
-                        <div><span className="text-muted-foreground">Mão de Obra (%):</span><p className="font-medium mt-0.5">{item.laborPercent}%</p></div>
-                        <div><span className="text-muted-foreground">Mão de Obra (R$):</span><p className="font-medium mt-0.5">{formatCurrency(item.laborValue)}</p></div>
-                        <div className="col-span-2 md:col-span-4 lg:col-span-6 mt-2 border-t border-border pt-2">
-                          <span className="text-muted-foreground font-medium">Composição do Preço:</span>
-                          <div className="flex flex-wrap gap-4 mt-2">
-                            <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
-                              <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-muted-foreground">Custo Base:</span>
-                              <span className="font-semibold">{formatCurrency(item.baseValue)}</span>
+                    <TableCell colSpan={18} className="p-4">
+                      <div className="text-xs">
+                        <span className="text-muted-foreground font-medium">Composição do Preço:</span>
+                        <div className="flex flex-wrap gap-4 mt-2">
+                          <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
+                            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-muted-foreground">Custo Base:</span>
+                            <span className="font-semibold">{formatCurrency(item.baseValue)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
+                            <Percent className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-muted-foreground">Margem:</span>
+                            <span className="font-semibold text-primary">{item.profitMargin}%</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
+                            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-muted-foreground">Markup:</span>
+                            <span className="font-semibold">{item.markup.toFixed(1)}%</span>
+                          </div>
+                          {item.taxes.map((t, i) => (
+                            <div key={i} className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
+                              <span className="text-muted-foreground">{t.type}:</span>
+                              <span className="font-semibold">{formatCurrency(t.value)}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
-                              <Percent className="h-3.5 w-3.5 text-primary" />
-                              <span className="text-muted-foreground">Margem:</span>
-                              <span className="font-semibold text-primary">{item.profitMargin}%</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
-                              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-muted-foreground">Markup:</span>
-                              <span className="font-semibold">{item.markup.toFixed(1)}%</span>
-                            </div>
-                            {item.taxes.map((t, i) => (
-                              <div key={i} className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
-                                <span className="text-muted-foreground">{t.type}:</span>
-                                <span className="font-semibold">{formatCurrency(t.value)}</span>
-                              </div>
-                            ))}
-                            <div className="flex items-center gap-1.5 bg-primary/10 rounded-lg px-3 py-1.5 border border-primary/30">
-                              <DollarSign className="h-3.5 w-3.5 text-primary" />
-                              <span className="text-primary font-medium">Preço Final:</span>
-                              <span className="font-bold text-primary">{formatCurrency(item.finalPrice)}</span>
-                            </div>
+                          ))}
+                          <div className="flex items-center gap-1.5 bg-primary/10 rounded-lg px-3 py-1.5 border border-primary/30">
+                            <DollarSign className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-primary font-medium">Preço Final:</span>
+                            <span className="font-bold text-primary">{formatCurrency(item.finalPrice)}</span>
                           </div>
                         </div>
                       </div>
