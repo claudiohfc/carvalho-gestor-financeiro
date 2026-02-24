@@ -1,83 +1,92 @@
 
 
-# Formulário de Inclusão - Meus Registros
+# Plano de Alteracoes - 4 Modulos
 
-## Arquivo Modificado
+## 1. Dashboard Administrativo - Remover Metricas de Eficiencia
 
-`src/pages/MeusRegistros.tsx`
+**Arquivo:** `src/pages/DashboardAdministrativo.tsx`
 
-## Alterações
+- Remover o card "Metricas de Eficiencia" (linhas 145-179) com as progress bars
+- Remover o KPI "Taxa de Utilizacao" (linhas 69-84) que depende de `efficiencyMetrics`
+- Alterar grid do topo de `grid-cols-3` para `grid-cols-2` (manter apenas Custo Operacional Total e Orcamento Disponivel)
+- Alterar o grid de graficos de `grid-cols-2` para coluna unica (o grafico de custos ocupa largura total)
+- Remover imports nao utilizados: `Gauge`, `efficiencyMetrics`, `TrendingUp`, `TrendingDown`, `Minus`
 
-### 1. Novo Dialog de Inclusão
+## 2. Simulador de Cenarios - Expandir Precos e Remover Perda de Cliente
 
-Adicionar um `Dialog` controlado por estado `createDialogOpen` que abre ao clicar em um novo botão "+ Incluir Registro" (mantendo o botão existente "Novo Registro" que aponta para `/lancamentos`).
+**Arquivo:** `src/pages/SimuladorCenarios.tsx`
 
-### 2. Seleção de Tipo via Tabs
+### Remover Perda de Cliente
+- Remover tab trigger "Perda de Cliente" (linha 165)
+- Remover todo o TabsContent value="cliente" (linhas 328-393)
+- Remover interface `ClientLossInputs`, estado `clientLoss`, calculo `lossResult`, default `defaultClientLoss`
+- Remover import `UserMinus`
+- Alterar `grid-cols-3` do TabsList para `grid-cols-2`
 
-No topo do formulário, usar `Tabs` com duas opções:
-- **Entrada (Nota Fiscal)** - formulário para emissão de NF
-- **Saída (Pagamento de Despesa)** - formulário para pagamento
+### Expandir Simulacao de Precos
+No painel lateral de indices (linhas 262-276), adicionar:
 
-### 3. Campos do Formulário - Entrada (Nota Fiscal)
+**Novos indices de mercado:**
+- INPC (input %)
+- IGP-DI (input %)
+- Selic (input %)
+- CDI (input %)
 
-| Campo | Componente | Obrigatório |
-|-------|-----------|-------------|
-| Número da Nota Fiscal | Input text | Sim |
-| Série | Input text | Não |
-| Data de Emissão | Input date | Sim |
-| Data de Vencimento | Input date | Sim |
-| Cliente | Select (clientes de `mockData`) | Sim |
-| CNPJ/CPF do Cliente | Input text | Sim |
-| Descrição do Serviço/Produto | Textarea | Sim |
-| Categoria | Select (categorias de entrada) | Sim |
-| Subcategoria | Select (dinâmico pela categoria) | Não |
-| Valor Total | Input number | Sim |
-| ISS (%) | Input number | Não |
-| IRRF (%) | Input number | Não |
-| Valor Líquido | Input readonly (calculado) | - |
-| Centro de Custo | Select (`costCenters`) | Não |
-| Observações | Textarea | Não |
+**Opcao de Valores Aleatorios:**
+- Input "Minimo %" e "Maximo %"
+- Botao "Aplicar Aleatorio" que gera percentual random entre min e max para cada produto
 
-Cálculo automático: `valorLiquido = valorTotal - (valorTotal * iss / 100) - (valorTotal * irrf / 100)`
+**Formulario de Indice Personalizado:**
+- Card separado com titulo "Criar Indice Personalizado"
+- Campos: Nome do Indice (Input text), Percentual (Input number %)
+- Botao "Adicionar Indice"
+- Lista dos indices personalizados criados com botao "Aplicar" e "Excluir"
+- Estado local: `customIndices: { id: string; name: string; value: number }[]`
 
-### 4. Campos do Formulário - Saída (Pagamento de Despesa)
+**Novos botoes de aplicacao:**
+- Aplicar INPC, Aplicar IGP-DI, Aplicar Selic, Aplicar CDI
+- Aplicar Aleatorio
 
-| Campo | Componente | Obrigatório |
-|-------|-----------|-------------|
-| Data do Pagamento | Input date | Sim |
-| Data de Vencimento | Input date | Sim |
-| Fornecedor | Select (fornecedores de `mockData`) | Sim |
-| CNPJ/CPF do Fornecedor | Input text | Não |
-| Descrição da Despesa | Textarea | Sim |
-| Categoria | Select (categorias de despesa) | Sim |
-| Subcategoria | Select (dinâmico) | Não |
-| Valor | Input number | Sim |
-| Forma de Pagamento | Select (Boleto, Transferência, PIX, Cartão, Débito Automático) | Sim |
-| Número do Documento | Input text | Não |
-| Centro de Custo | Select (`costCenters`) | Não |
-| Observações | Textarea | Não |
+## 3. Precificacao - Todos os Campos Visiveis na Tabela
 
-### 5. Comportamento ao Submeter
+**Arquivo:** `src/pages/Precificacao.tsx`
 
-- Validação visual dos campos obrigatórios (borda vermelha se vazio)
-- Mapeia os dados do formulário para a interface `Transaction` existente
-- Adiciona ao estado `data` via `setData`
-- Toast de sucesso: "Registro incluído com sucesso"
-- Fecha o Dialog e reseta o formulário
-- O novo registro aparece na tabela imediatamente
+Alterar `renderTable` para exibir TODAS as colunas diretamente na tabela, sem depender de expansao:
 
-### 6. Imports Adicionais
+**Colunas completas:**
+Codigo | Categoria | Nome | Descricao | Unidade | Custos Fixos | Custos Variaveis | Tempo Prep. | Valor Hora | Mao de Obra (%) | Mao de Obra (R$) | Margem | Markup | Custo Base | Impostos | Valor Imposto | Preco Final | Acoes
 
-- `Tabs, TabsList, TabsTrigger, TabsContent` de `@/components/ui/tabs`
-- `Label` de `@/components/ui/label`
-- `Textarea` de `@/components/ui/textarea`
-- `clients, subcategories, costCenters` de `@/data/mockData`
-- `ScrollArea` de `@/components/ui/scroll-area`
+- Tabela com `overflow-x-auto` para scroll horizontal
+- Manter a funcionalidade de expandir para ver composicao visual com chips coloridos
+- Coluna Impostos mostra tipo concatenado, coluna Valor Imposto mostra total
 
-### 7. UI/UX
+## 4. Meus Registros - Verificar e Corrigir Formulario
 
-- Dialog com `max-w-2xl` e `ScrollArea` para acomodar todos os campos
-- Formulário em grid de 2 colunas para campos curtos, 1 coluna para textareas
-- Valor Líquido calculado em tempo real com destaque visual (badge verde)
-- Botões: "Cancelar" (outline) e "Salvar Registro" (primary)
+**Arquivo:** `src/components/registros/RegistroFormDialog.tsx` e `src/pages/MeusRegistros.tsx`
+
+O componente `RegistroFormDialog` ja existe e esta importado na pagina (linha 141). Verificar se ha algum problema de renderizacao. O componente ja possui:
+- Tabs Entrada (Nota Fiscal) / Saida (Pagamento)
+- Todos os campos especificados no plano
+- Validacao visual e calculo automatico do valor liquido
+
+Se o botao "Incluir Registro" nao esta visivel ou funcional, garantir que:
+- O componente esta renderizando corretamente na linha 141
+- O Dialog abre ao clicar
+- Nenhum erro de runtime impede a renderizacao
+
+## Arquivos Modificados
+
+```text
+src/pages/DashboardAdministrativo.tsx   (remover eficiencia)
+src/pages/SimuladorCenarios.tsx         (expandir precos, remover perda)
+src/pages/Precificacao.tsx              (tabela completa com todas colunas)
+src/components/registros/RegistroFormDialog.tsx  (verificar/corrigir se necessario)
+```
+
+## Ordem de Implementacao
+
+1. DashboardAdministrativo - remover metricas de eficiencia
+2. SimuladorCenarios - remover perda de cliente, expandir indices
+3. Precificacao - expandir colunas da tabela
+4. MeusRegistros - verificar e garantir funcionamento do formulario
 
