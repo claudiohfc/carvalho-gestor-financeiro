@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   LayoutDashboard,
@@ -19,6 +19,7 @@ import {
   Briefcase,
   Tag,
   Bot,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const dashboardItems = [
   { to: '/financeiro', icon: LayoutDashboard, label: 'Financeiro' },
@@ -55,9 +58,24 @@ const afterDashboardItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
   const isDashboardActive = dashboardItems.some(item => location.pathname === item.to);
   const [dashboardsOpen, setDashboardsOpen] = useState(isDashboardActive);
+
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({ title: 'Erro ao sair', description: error.message, variant: 'destructive' });
+    } else {
+      navigate('/login');
+    }
+  };
+
+  const userEmail = user?.email || '';
+  const userName = user?.user_metadata?.full_name || userEmail.split('@')[0] || 'Usuário';
 
   const renderNavItem = (item: { to: string; icon: any; label: string }, indent = false) => {
     const isActive = location.pathname === item.to;
@@ -113,10 +131,8 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-        {/* Home */}
         {mainNavItems.map((item) => renderNavItem(item))}
 
-        {/* Dashboards Group */}
         <Collapsible open={dashboardsOpen} onOpenChange={setDashboardsOpen}>
           <CollapsibleTrigger asChild>
             <button
@@ -144,7 +160,6 @@ export function Sidebar() {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* After Dashboards */}
         {afterDashboardItems.map((item) => renderNavItem(item))}
       </nav>
 
@@ -164,11 +179,20 @@ export function Sidebar() {
           </div>
           {!collapsed && (
             <div className="flex-1 truncate">
-              <p className="truncate text-sm font-medium text-foreground">Carlos Carvalho</p>
-              <p className="truncate text-[10px] text-muted-foreground">Gestor</p>
+              <p className="truncate text-sm font-medium text-foreground">{userName}</p>
+              <p className="truncate text-[10px] text-muted-foreground">{userEmail}</p>
             </div>
           )}
         </NavLink>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-destructive"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span>Sair</span>}
+        </Button>
       </div>
     </aside>
   );

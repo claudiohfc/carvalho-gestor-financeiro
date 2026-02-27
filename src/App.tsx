@@ -3,6 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import Login from "./pages/Login";
+import CadastroPage from "./pages/Cadastro";
+import EsqueciSenha from "./pages/EsqueciSenha";
+import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import DashboardFiscal from "./pages/DashboardFiscal";
@@ -29,21 +34,28 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/financeiro" element={<DashboardFinanceiro />} />
-          <Route path="/fiscal" element={<DashboardFiscal />} />
-          <Route path="/administrativo" element={<DashboardAdministrativo />} />
-          <Route path="/analitico" element={<DashboardAnalitico />} />
-          <Route path="/dre" element={<DREGerencial />} />
-          <Route path="/simulador" element={<SimuladorCenarios />} />
-          <Route path="/registros" element={<MeusRegistros />} />
-          <Route path="/cadastros" element={<Cadastros />} />
-          <Route path="/precificacao" element={<Precificacao />} />
-          <Route path="/assistente-ia" element={<AssistenteIA />} />
-          <Route path="/importacao" element={<Importacao />} />
-          <Route path="/conciliacao" element={<ConciliacaoBancaria />} />
-          <Route path="/departamento-pessoal" element={<DepartamentoPessoal />} />
-          <Route path="/perfil" element={<Perfil />} />
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<CadastroPage />} />
+          <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* Protected routes */}
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/financeiro" element={<ProtectedRoute><DashboardFinanceiro /></ProtectedRoute>} />
+          <Route path="/fiscal" element={<ProtectedRoute><DashboardFiscal /></ProtectedRoute>} />
+          <Route path="/administrativo" element={<ProtectedRoute><DashboardAdministrativo /></ProtectedRoute>} />
+          <Route path="/analitico" element={<ProtectedRoute><DashboardAnalitico /></ProtectedRoute>} />
+          <Route path="/dre" element={<ProtectedRoute><DREGerencial /></ProtectedRoute>} />
+          <Route path="/simulador" element={<ProtectedRoute><SimuladorCenarios /></ProtectedRoute>} />
+          <Route path="/registros" element={<ProtectedRoute><MeusRegistros /></ProtectedRoute>} />
+          <Route path="/cadastros" element={<ProtectedRoute><Cadastros /></ProtectedRoute>} />
+          <Route path="/precificacao" element={<ProtectedRoute><Precificacao /></ProtectedRoute>} />
+          <Route path="/assistente-ia" element={<ProtectedRoute><AssistenteIA /></ProtectedRoute>} />
+          <Route path="/importacao" element={<ProtectedRoute><Importacao /></ProtectedRoute>} />
+          <Route path="/conciliacao" element={<ProtectedRoute><ConciliacaoBancaria /></ProtectedRoute>} />
+          <Route path="/departamento-pessoal" element={<ProtectedRoute><DepartamentoPessoal /></ProtectedRoute>} />
+          <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

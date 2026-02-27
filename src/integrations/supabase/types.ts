@@ -14,7 +14,176 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      payroll_records: {
+        Row: {
+          benefits: number | null
+          commissions: number | null
+          created_at: string | null
+          decimo_terceiro_1: number | null
+          decimo_terceiro_2: number | null
+          ferias: number | null
+          fgts: number | null
+          id: number
+          inss: number | null
+          ir: number | null
+          person_id: number
+          pro_labore: number | null
+          reference_month: string
+          reimbursements: number | null
+          salary: number | null
+          total_cost: number | null
+          user_id: string
+          vale_alimentacao: number | null
+          vale_transporte: number | null
+        }
+        Insert: {
+          benefits?: number | null
+          commissions?: number | null
+          created_at?: string | null
+          decimo_terceiro_1?: number | null
+          decimo_terceiro_2?: number | null
+          ferias?: number | null
+          fgts?: number | null
+          id?: never
+          inss?: number | null
+          ir?: number | null
+          person_id: number
+          pro_labore?: number | null
+          reference_month: string
+          reimbursements?: number | null
+          salary?: number | null
+          total_cost?: number | null
+          user_id: string
+          vale_alimentacao?: number | null
+          vale_transporte?: number | null
+        }
+        Update: {
+          benefits?: number | null
+          commissions?: number | null
+          created_at?: string | null
+          decimo_terceiro_1?: number | null
+          decimo_terceiro_2?: number | null
+          ferias?: number | null
+          fgts?: number | null
+          id?: never
+          inss?: number | null
+          ir?: number | null
+          person_id?: number
+          pro_labore?: number | null
+          reference_month?: string
+          reimbursements?: number | null
+          salary?: number | null
+          total_cost?: number | null
+          user_id?: string
+          vale_alimentacao?: number | null
+          vale_transporte?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_records_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      people: {
+        Row: {
+          active: boolean | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          end_date: string | null
+          id: number
+          name: string
+          phone: string | null
+          start_date: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          end_date?: string | null
+          id?: never
+          name: string
+          phone?: string | null
+          start_date?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          end_date?: string | null
+          id?: never
+          name?: string
+          phone?: string | null
+          start_date?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string
+          client_or_supplier: string | null
+          cost_center: string | null
+          created_at: string | null
+          date: string
+          description: string
+          id: number
+          notes: string | null
+          payment_method: string | null
+          recurring: boolean | null
+          subcategory: string | null
+          tags: string[] | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          client_or_supplier?: string | null
+          cost_center?: string | null
+          created_at?: string | null
+          date: string
+          description: string
+          id?: never
+          notes?: string | null
+          payment_method?: string | null
+          recurring?: boolean | null
+          subcategory?: string | null
+          tags?: string[] | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          client_or_supplier?: string | null
+          cost_center?: string | null
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: never
+          notes?: string | null
+          payment_method?: string | null
+          recurring?: boolean | null
+          subcategory?: string | null
+          tags?: string[] | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
