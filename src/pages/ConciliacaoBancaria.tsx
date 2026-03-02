@@ -31,45 +31,54 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { 
-  BankStatement, 
-  generateBankStatement, 
-  systemPayments,
-  autoReconcile,
-  ReconciliationStatus
-} from '@/data/mockBankData';
+import { useBankReconciliation, BankStatement } from '@/hooks/useBankReconciliation';
 
 type ImportStatus = 'idle' | 'uploading' | 'processing' | 'success';
+type ReconciliationStatus = 'conciliado' | 'pendente' | 'divergente';
+
+function getStatementStatus(stmt: BankStatement): ReconciliationStatus {
+  if (stmt.reconciled) return 'conciliado';
+  if (stmt.divergence_reason) return 'divergente';
+  return 'pendente';
+}
 
 export default function ConciliacaoBancaria() {
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle');
   const [progress, setProgress] = useState(0);
-  const [statements, setStatements] = useState<BankStatement[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
+  const { accounts, statements, addAccount, importStatements, reconcileStatement, deleteStatement, autoReconcile, fetchStatements } = useBankReconciliation();
 
   const stats = useMemo(() => {
-    const conciliados = statements.filter(s => s.status === 'conciliado').length;
-    const pendentes = statements.filter(s => s.status === 'pendente').length;
-    const divergentes = statements.filter(s => s.status === 'divergente').length;
+    const conciliados = statements.filter(s => s.reconciled).length;
+    const divergentes = statements.filter(s => !s.reconciled && s.divergence_reason).length;
+    const pendentes = statements.filter(s => !s.reconciled && !s.divergence_reason).length;
     return { conciliados, pendentes, divergentes, total: statements.length };
   }, [statements]);
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR');
   };
 
-  const simulateImport = () => {
+  const simulateImport = async () => {
     setImportStatus('uploading');
     setProgress(0);
 
+    // Ensure a default account exists
+    let accountId: number;
+    if (accounts.length === 0) {
+      const { data } = await addAccount({ bank_name: 'Banco Padrão', account_name: 'Conta Principal' });
+      if (!data) { setImportStatus('idle'); return; }
+      accountId = data.id;
+    } else {
+      accountId = accounts[0].id;
+    }
+
+    // Simulate upload progress
     const uploadInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 40) {
@@ -80,15 +89,30 @@ export default function ConciliacaoBancaria() {
             setProgress((p) => {
               if (p >= 100) {
                 clearInterval(processInterval);
-                // Gera e reconcilia os dados
-                const bankData = generateBankStatement();
-                const reconciledData = autoReconcile(bankData, systemPayments);
-                setStatements(reconciledData);
-                setImportStatus('success');
-                
-                toast({
-                  title: 'Extrato importado!',
-                  description: `${reconciledData.length} lançamentos carregados e analisados.`,
+                // Import mock bank statement data
+                const mockEntries = [
+                  { date: '2025-01-10', description: 'TED RECEBIDA - PREMIUM CORP', amount: 18500, type: 'credito' as const },
+                  { date: '2025-01-12', description: 'TED RECEBIDA - EMPRESA ABC SA', amount: 45000, type: 'credito' as const },
+                  { date: '2025-01-15', description: 'PGTO BOLETO - FORNEC ABC', amount: 850, type: 'debito' as const },
+                  { date: '2025-01-16', description: 'PIX ENVIADO', amount: 500, type: 'debito' as const },
+                  { date: '2025-01-18', description: 'DEBITO AUTOMATICO - ENERGIA', amount: 485, type: 'debito' as const },
+                  { date: '2025-01-19', description: 'TARIFA BANCARIA', amount: 45, type: 'debito' as const },
+                  { date: '2025-01-20', description: 'PGTO ALUGUEL', amount: 8500, type: 'debito' as const },
+                  { date: '2025-01-21', description: 'PIX RECEBIDO - GRUPO XYZ', amount: 28000, type: 'credito' as const },
+                  { date: '2025-01-22', description: 'DEBITO AUTOMATICO - TELECOM', amount: 650, type: 'debito' as const },
+                  { date: '2025-01-23', description: 'IOF S/ OPERACOES', amount: 12.50, type: 'debito' as const },
+                  { date: '2025-01-25', description: 'TED ENVIADA - FORNECEDOR', amount: 3200, type: 'debito' as const },
+                  { date: '2025-01-26', description: 'PIX RECEBIDO - STARTUP TECH', amount: 22000, type: 'credito' as const },
+                ];
+
+                importStatements(accountId, mockEntries).then(() => {
+                  autoReconcile(accountId).then(() => {
+                    setImportStatus('success');
+                    toast({
+                      title: 'Extrato importado!',
+                      description: `${mockEntries.length} lançamentos carregados e analisados.`,
+                    });
+                  });
                 });
                 
                 return 100;
@@ -125,35 +149,25 @@ export default function ConciliacaoBancaria() {
     }
   };
 
-  const handleReconcile = (statementId: string) => {
-    setStatements(prev => 
-      prev.map(s => 
-        s.id === statementId 
-          ? { ...s, status: 'conciliado' as ReconciliationStatus, divergenceReason: undefined }
-          : s
-      )
-    );
-    toast({
-      title: 'Lançamento conciliado',
-      description: 'O lançamento foi marcado como conciliado.',
-    });
+  const handleReconcile = async (statementId: number) => {
+    const { error } = await reconcileStatement(statementId);
+    if (!error) {
+      toast({ title: 'Lançamento conciliado', description: 'O lançamento foi marcado como conciliado.' });
+    }
   };
 
-  const handleIgnore = (statementId: string) => {
-    setStatements(prev => prev.filter(s => s.id !== statementId));
-    toast({
-      title: 'Lançamento ignorado',
-      description: 'O lançamento foi removido da lista.',
-    });
+  const handleIgnore = async (statementId: number) => {
+    const { error } = await deleteStatement(statementId);
+    if (!error) {
+      toast({ title: 'Lançamento ignorado', description: 'O lançamento foi removido da lista.' });
+    }
   };
 
-  const handleReprocess = () => {
-    const reconciledData = autoReconcile(statements, systemPayments);
-    setStatements(reconciledData);
-    toast({
-      title: 'Reprocessamento concluído',
-      description: 'Os lançamentos foram analisados novamente.',
-    });
+  const handleReprocess = async () => {
+    if (accounts.length > 0) {
+      await autoReconcile(accounts[0].id);
+      toast({ title: 'Reprocessamento concluído', description: 'Os lançamentos foram analisados novamente.' });
+    }
   };
 
   const getStatusBadge = (status: ReconciliationStatus) => {
@@ -182,6 +196,8 @@ export default function ConciliacaoBancaria() {
     }
   };
 
+  const showResults = importStatus === 'success' || statements.length > 0;
+
   return (
     <MainLayout>
       <Header
@@ -190,8 +206,7 @@ export default function ConciliacaoBancaria() {
       />
 
       <div className="p-8 space-y-6">
-        {/* Upload Area ou Resumo */}
-        {importStatus === 'idle' || importStatus === 'uploading' || importStatus === 'processing' ? (
+        {!showResults || importStatus === 'uploading' || importStatus === 'processing' ? (
           <Card className="glass-card border-border">
             <CardHeader>
               <CardTitle className="text-lg">Importar Extrato Bancário</CardTitle>
@@ -323,7 +338,7 @@ export default function ConciliacaoBancaria() {
 
             {/* Ações */}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => { setImportStatus('idle'); setStatements([]); }}>
+              <Button variant="outline" onClick={() => { setImportStatus('idle'); }}>
                 <Upload className="h-4 w-4 mr-2" />
                 Novo Extrato
               </Button>
@@ -354,64 +369,67 @@ export default function ConciliacaoBancaria() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {statements.map((stmt) => (
-                        <TableRow key={stmt.id} className="hover:bg-muted/20">
-                          <TableCell className="font-mono text-sm">
-                            {formatDate(stmt.date)}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="text-sm">{stmt.description}</p>
-                              {stmt.divergenceReason && (
-                                <p className="text-xs text-destructive mt-1">
-                                  {stmt.divergenceReason}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className={cn(
-                            'text-right font-medium',
-                            stmt.type === 'credito' ? 'text-success' : 'text-destructive'
-                          )}>
-                            {stmt.type === 'credito' ? '+' : '-'}{formatCurrency(stmt.value)}
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(stmt.status)}
-                          </TableCell>
-                          <TableCell>
-                            {stmt.status !== 'conciliado' && (
-                              <div className="flex justify-center gap-1">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
-                                      onClick={() => handleReconcile(stmt.id)}
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Conciliar</TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                      onClick={() => handleIgnore(stmt.id)}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Ignorar</TooltipContent>
-                                </Tooltip>
+                      {statements.map((stmt) => {
+                        const status = getStatementStatus(stmt);
+                        return (
+                          <TableRow key={stmt.id} className="hover:bg-muted/20">
+                            <TableCell className="font-mono text-sm">
+                              {formatDate(stmt.date)}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-sm">{stmt.description}</p>
+                                {stmt.divergence_reason && (
+                                  <p className="text-xs text-destructive mt-1">
+                                    {stmt.divergence_reason}
+                                  </p>
+                                )}
                               </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                            <TableCell className={cn(
+                              'text-right font-medium',
+                              stmt.type === 'credito' ? 'text-success' : 'text-destructive'
+                            )}>
+                              {stmt.type === 'credito' ? '+' : '-'}{formatCurrency(stmt.amount)}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(status)}
+                            </TableCell>
+                            <TableCell>
+                              {status !== 'conciliado' && (
+                                <div className="flex justify-center gap-1">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                                        onClick={() => handleReconcile(stmt.id)}
+                                      >
+                                        <Check className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Conciliar</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() => handleIgnore(stmt.id)}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Ignorar</TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
