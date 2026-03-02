@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_accounts: {
+        Row: {
+          account_name: string
+          bank_name: string
+          created_at: string | null
+          id: number
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          bank_name: string
+          created_at?: string | null
+          id?: never
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          bank_name?: string
+          created_at?: string | null
+          id?: never
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bank_statements: {
+        Row: {
+          amount: number
+          bank_account_id: number
+          created_at: string | null
+          date: string
+          description: string | null
+          divergence_reason: string | null
+          id: number
+          matched_transaction_id: number | null
+          reconciled: boolean | null
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_account_id: number
+          created_at?: string | null
+          date: string
+          description?: string | null
+          divergence_reason?: string | null
+          id?: never
+          matched_transaction_id?: number | null
+          reconciled?: boolean | null
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: number
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          divergence_reason?: string | null
+          id?: never
+          matched_transaction_id?: number | null
+          reconciled?: boolean | null
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_statements_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_records: {
         Row: {
           benefits: number | null
@@ -125,6 +199,108 @@ export type Database = {
           name?: string
           phone?: string | null
           start_date?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      products_services: {
+        Row: {
+          base_cost: number | null
+          category: string | null
+          code: string | null
+          created_at: string | null
+          description: string | null
+          final_price: number | null
+          fixed_costs: number | null
+          id: number
+          labor_percent: number | null
+          labor_value: number | null
+          markup: number | null
+          name: string
+          preparation_hour_value: number | null
+          preparation_time: number | null
+          profit_margin: number | null
+          tax_type: string | null
+          tax_value: number | null
+          type: string
+          unit_measure: string | null
+          user_id: string
+          variable_costs: number | null
+        }
+        Insert: {
+          base_cost?: number | null
+          category?: string | null
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          final_price?: number | null
+          fixed_costs?: number | null
+          id?: never
+          labor_percent?: number | null
+          labor_value?: number | null
+          markup?: number | null
+          name: string
+          preparation_hour_value?: number | null
+          preparation_time?: number | null
+          profit_margin?: number | null
+          tax_type?: string | null
+          tax_value?: number | null
+          type: string
+          unit_measure?: string | null
+          user_id: string
+          variable_costs?: number | null
+        }
+        Update: {
+          base_cost?: number | null
+          category?: string | null
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          final_price?: number | null
+          fixed_costs?: number | null
+          id?: never
+          labor_percent?: number | null
+          labor_value?: number | null
+          markup?: number | null
+          name?: string
+          preparation_hour_value?: number | null
+          preparation_time?: number | null
+          profit_margin?: number | null
+          tax_type?: string | null
+          tax_value?: number | null
+          type?: string
+          unit_measure?: string | null
+          user_id?: string
+          variable_costs?: number | null
+        }
+        Relationships: []
+      }
+      scenario_simulations: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          input_data: Json | null
+          result_data: Json | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: never
+          input_data?: Json | null
+          result_data?: Json | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: never
+          input_data?: Json | null
+          result_data?: Json | null
           type?: string
           user_id?: string
         }

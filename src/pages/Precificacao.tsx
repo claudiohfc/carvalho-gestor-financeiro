@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,55 +14,80 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, ChevronDown, Eye, Pencil, Trash2, Tag, DollarSign, Percent } from 'lucide-react';
-import { PricingItem, mockServices, mockProducts, formatCurrency } from '@/data/mockPricingData';
+import { formatCurrency } from '@/data/mockPricingData';
 import { cn } from '@/lib/utils';
+import { usePricing, ProductService } from '@/hooks/usePricing';
 
-const emptyForm: Omit<PricingItem, 'id' | 'markup' | 'totalTax' | 'finalPrice'> = {
-  type: 'produto', code: '', category: '', name: '', description: '', unit: '',
-  fixedCosts: 0, variableCosts: 0, prepTime: 0, hourRate: 0,
-  laborPercent: 0, laborValue: 0, profitMargin: 0, baseValue: 0,
-  taxes: [{ type: 'ISS', value: 0 }],
+interface FormState {
+  type: 'produto' | 'servico';
+  code: string;
+  category: string;
+  name: string;
+  description: string;
+  unit_measure: string;
+  fixed_costs: number;
+  variable_costs: number;
+  preparation_time: number;
+  preparation_hour_value: number;
+  labor_percent: number;
+  labor_value: number;
+  profit_margin: number;
+  tax_type: string;
+  tax_value: number;
+}
+
+const emptyForm: FormState = {
+  type: 'produto', code: '', category: '', name: '', description: '', unit_measure: '',
+  fixed_costs: 0, variable_costs: 0, preparation_time: 0, preparation_hour_value: 0,
+  labor_percent: 0, labor_value: 0, profit_margin: 0, tax_type: 'ISS', tax_value: 0,
 };
+
+function calcPricing(form: FormState) {
+  const base_cost = form.fixed_costs + form.variable_costs + (form.preparation_time * form.preparation_hour_value) + form.labor_value;
+  const final_price = base_cost * (1 + form.profit_margin / 100) + form.tax_value;
+  const markup = base_cost > 0 ? ((final_price - base_cost) / base_cost) * 100 : 0;
+  return { base_cost, final_price: Math.round(final_price * 100) / 100, markup: Math.round(markup * 100) / 100 };
+}
 
 export default function Precificacao() {
   const { toast } = useToast();
-  const [services, setServices] = useState<PricingItem[]>(mockServices);
-  const [products, setProducts] = useState<PricingItem[]>(mockProducts);
+  const { items, loading, addItem, deleteItem } = usePricing();
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formType, setFormType] = useState<'produto' | 'servico'>('produto');
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<FormState>(emptyForm);
 
-  const handleSubmit = () => {
+  const services = items.filter(i => i.type === 'servico');
+  const products = items.filter(i => i.type === 'produto');
+
+  const handleSubmit = async () => {
     if (!form.name || !form.code || !form.category) {
       toast({ title: 'Campos obrigatórios', description: 'Preencha código, nome e categoria.', variant: 'destructive' });
       return;
     }
-    const baseValue = form.fixedCosts + form.variableCosts + (form.prepTime * form.hourRate) + form.laborValue;
-    const totalTax = form.taxes.reduce((s, t) => s + t.value, 0);
-    const finalPrice = baseValue * (1 + form.profitMargin / 100) + totalTax;
-    const markup = baseValue > 0 ? ((finalPrice - baseValue) / baseValue) * 100 : 0;
+    const { base_cost, final_price, markup } = calcPricing(form);
 
-    const newItem: PricingItem = {
-      ...form, id: `new-${Date.now()}`, type: formType,
-      baseValue, markup: Math.round(markup * 100) / 100, totalTax, finalPrice: Math.round(finalPrice * 100) / 100,
-    };
+    const { error } = await addItem({
+      ...form,
+      base_cost,
+      final_price,
+      markup,
+    });
 
-    if (formType === 'servico') setServices(prev => [...prev, newItem]);
-    else setProducts(prev => [...prev, newItem]);
-
-    toast({ title: 'Item adicionado!', description: `${newItem.name} foi cadastrado com sucesso.` });
+    if (error) {
+      toast({ title: 'Erro', description: 'Não foi possível salvar.', variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Item adicionado!', description: `${form.name} foi cadastrado com sucesso.` });
     setForm(emptyForm);
     setDialogOpen(false);
   };
 
-  const handleDelete = (id: string, type: 'produto' | 'servico') => {
-    if (type === 'servico') setServices(prev => prev.filter(s => s.id !== id));
-    else setProducts(prev => prev.filter(p => p.id !== id));
-    toast({ title: 'Item removido', description: 'O item foi excluído com sucesso.' });
+  const handleDelete = async (id: number) => {
+    const { error } = await deleteItem(id);
+    if (!error) toast({ title: 'Item removido', description: 'O item foi excluído com sucesso.' });
   };
 
-  const renderTable = (items: PricingItem[]) => (
+  const renderTable = (tableItems: ProductService[]) => (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
@@ -88,8 +113,8 @@ export default function Precificacao() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map(item => (
-            <Collapsible key={item.id} open={expandedRow === item.id} onOpenChange={(open) => setExpandedRow(open ? item.id : null)} asChild>
+          {tableItems.map(item => (
+            <Collapsible key={item.id} open={expandedRow === String(item.id)} onOpenChange={(open) => setExpandedRow(open ? String(item.id) : null)} asChild>
               <>
                 <CollapsibleTrigger asChild>
                   <TableRow className="cursor-pointer hover:bg-muted/50 transition-colors">
@@ -97,31 +122,31 @@ export default function Precificacao() {
                     <TableCell><Badge variant="secondary" className="text-[10px] whitespace-nowrap">{item.category}</Badge></TableCell>
                     <TableCell className="text-xs font-medium whitespace-nowrap">{item.name}</TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">{item.description}</TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">{item.unit}</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.fixedCosts)}</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.variableCosts)}</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{item.prepTime}h</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.hourRate)}</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{item.laborPercent}%</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.laborValue)}</TableCell>
-                    <TableCell className="text-xs text-right text-primary font-medium whitespace-nowrap">{item.profitMargin}%</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{item.unit_measure}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.fixed_costs)}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.variable_costs)}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{item.preparation_time}h</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.preparation_hour_value)}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{item.labor_percent}%</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.labor_value)}</TableCell>
+                    <TableCell className="text-xs text-right text-primary font-medium whitespace-nowrap">{item.profit_margin}%</TableCell>
                     <TableCell className="text-xs text-right font-medium whitespace-nowrap">{item.markup.toFixed(1)}%</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.baseValue)}</TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">{item.taxes.map(t => t.type).join(', ')}</TableCell>
-                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.totalTax)}</TableCell>
-                    <TableCell className="text-xs text-right font-bold text-primary whitespace-nowrap">{formatCurrency(item.finalPrice)}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.base_cost)}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{item.tax_type || '-'}</TableCell>
+                    <TableCell className="text-xs text-right whitespace-nowrap">{formatCurrency(item.tax_value)}</TableCell>
+                    <TableCell className="text-xs text-right font-bold text-primary whitespace-nowrap">{formatCurrency(item.final_price)}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setExpandedRow(expandedRow === item.id ? null : item.id); }}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setExpandedRow(expandedRow === String(item.id) ? null : String(item.id)); }}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.type); }}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expandedRow === item.id && "rotate-180")} />
+                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expandedRow === String(item.id) && "rotate-180")} />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -135,28 +160,28 @@ export default function Precificacao() {
                           <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
                             <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="text-muted-foreground">Custo Base:</span>
-                            <span className="font-semibold">{formatCurrency(item.baseValue)}</span>
+                            <span className="font-semibold">{formatCurrency(item.base_cost)}</span>
                           </div>
                           <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
                             <Percent className="h-3.5 w-3.5 text-primary" />
                             <span className="text-muted-foreground">Margem:</span>
-                            <span className="font-semibold text-primary">{item.profitMargin}%</span>
+                            <span className="font-semibold text-primary">{item.profit_margin}%</span>
                           </div>
                           <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
                             <Tag className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="text-muted-foreground">Markup:</span>
                             <span className="font-semibold">{item.markup.toFixed(1)}%</span>
                           </div>
-                          {item.taxes.map((t, i) => (
-                            <div key={i} className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
-                              <span className="text-muted-foreground">{t.type}:</span>
-                              <span className="font-semibold">{formatCurrency(t.value)}</span>
+                          {item.tax_type && (
+                            <div className="flex items-center gap-1.5 bg-card rounded-lg px-3 py-1.5 border border-border">
+                              <span className="text-muted-foreground">{item.tax_type}:</span>
+                              <span className="font-semibold">{formatCurrency(item.tax_value)}</span>
                             </div>
-                          ))}
+                          )}
                           <div className="flex items-center gap-1.5 bg-primary/10 rounded-lg px-3 py-1.5 border border-primary/30">
                             <DollarSign className="h-3.5 w-3.5 text-primary" />
                             <span className="text-primary font-medium">Preço Final:</span>
-                            <span className="font-bold text-primary">{formatCurrency(item.finalPrice)}</span>
+                            <span className="font-bold text-primary">{formatCurrency(item.final_price)}</span>
                           </div>
                         </div>
                       </div>
@@ -188,7 +213,7 @@ export default function Precificacao() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Tipo</Label>
-                    <Select value={formType} onValueChange={(v: 'produto' | 'servico') => setFormType(v)}>
+                    <Select value={form.type} onValueChange={(v: 'produto' | 'servico') => setForm({ ...form, type: v })}>
                       <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="produto">Produto</SelectItem>
@@ -218,56 +243,47 @@ export default function Precificacao() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Unidade de Medida</Label>
-                    <Input className="h-9 text-xs" value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="Hora, Mês, Unidade" />
+                    <Input className="h-9 text-xs" value={form.unit_measure} onChange={e => setForm({ ...form, unit_measure: e.target.value })} placeholder="Hora, Mês, Unidade" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Custos Fixos (R$)</Label>
-                    <Input className="h-9 text-xs" type="number" value={form.fixedCosts} onChange={e => setForm({ ...form, fixedCosts: Number(e.target.value) })} />
+                    <Input className="h-9 text-xs" type="number" value={form.fixed_costs} onChange={e => setForm({ ...form, fixed_costs: Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Custos Variáveis (R$)</Label>
-                    <Input className="h-9 text-xs" type="number" value={form.variableCosts} onChange={e => setForm({ ...form, variableCosts: Number(e.target.value) })} />
+                    <Input className="h-9 text-xs" type="number" value={form.variable_costs} onChange={e => setForm({ ...form, variable_costs: Number(e.target.value) })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Tempo de Preparação (h)</Label>
-                    <Input className="h-9 text-xs" type="number" value={form.prepTime} onChange={e => setForm({ ...form, prepTime: Number(e.target.value) })} />
+                    <Input className="h-9 text-xs" type="number" value={form.preparation_time} onChange={e => setForm({ ...form, preparation_time: Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Valor da Hora (R$)</Label>
-                    <Input className="h-9 text-xs" type="number" value={form.hourRate} onChange={e => setForm({ ...form, hourRate: Number(e.target.value) })} />
+                    <Input className="h-9 text-xs" type="number" value={form.preparation_hour_value} onChange={e => setForm({ ...form, preparation_hour_value: Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Margem de Lucro (%)</Label>
-                    <Input className="h-9 text-xs" type="number" value={form.profitMargin} onChange={e => setForm({ ...form, profitMargin: Number(e.target.value) })} />
+                    <Input className="h-9 text-xs" type="number" value={form.profit_margin} onChange={e => setForm({ ...form, profit_margin: Number(e.target.value) })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Mão de Obra (%)</Label>
-                    <Input className="h-9 text-xs" type="number" value={form.laborPercent} onChange={e => setForm({ ...form, laborPercent: Number(e.target.value) })} />
+                    <Input className="h-9 text-xs" type="number" value={form.labor_percent} onChange={e => setForm({ ...form, labor_percent: Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Mão de Obra (R$)</Label>
-                    <Input className="h-9 text-xs" type="number" value={form.laborValue} onChange={e => setForm({ ...form, laborValue: Number(e.target.value) })} />
+                    <Input className="h-9 text-xs" type="number" value={form.labor_value} onChange={e => setForm({ ...form, labor_value: Number(e.target.value) })} />
                   </div>
                 </div>
                 <div className="border-t border-border pt-3">
                   <Label className="text-xs font-medium">Impostos</Label>
-                  {form.taxes.map((tax, i) => (
-                    <div key={i} className="grid grid-cols-2 gap-3 mt-2">
-                      <Input className="h-9 text-xs" value={tax.type} onChange={e => {
-                        const taxes = [...form.taxes]; taxes[i].type = e.target.value; setForm({ ...form, taxes });
-                      }} placeholder="Tipo (ISS, ICMS...)" />
-                      <Input className="h-9 text-xs" type="number" value={tax.value} onChange={e => {
-                        const taxes = [...form.taxes]; taxes[i].value = Number(e.target.value); setForm({ ...form, taxes });
-                      }} placeholder="Valor (R$)" />
-                    </div>
-                  ))}
-                  <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => setForm({ ...form, taxes: [...form.taxes, { type: '', value: 0 }] })}>
-                    <Plus className="h-3 w-3 mr-1" /> Adicionar Imposto
-                  </Button>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <Input className="h-9 text-xs" value={form.tax_type} onChange={e => setForm({ ...form, tax_type: e.target.value })} placeholder="Tipo (ISS, ICMS...)" />
+                    <Input className="h-9 text-xs" type="number" value={form.tax_value} onChange={e => setForm({ ...form, tax_value: Number(e.target.value) })} placeholder="Valor (R$)" />
+                  </div>
                 </div>
                 <Button onClick={handleSubmit} className="w-full">Cadastrar Item</Button>
               </div>

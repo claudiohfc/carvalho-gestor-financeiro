@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { 
-  Calculator, Users, TrendingUp, ArrowRight, DollarSign, Target, Clock, RefreshCw, Lightbulb, Briefcase, UserCheck, Shuffle, Plus, Trash2,
+  Calculator, Users, TrendingUp, ArrowRight, DollarSign, Target, Clock, RefreshCw, Lightbulb, Briefcase, UserCheck, Shuffle, Plus, Trash2, Save,
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency } from '@/data/mockAnalyticsData';
 import { cn } from '@/lib/utils';
+import { useSimulations } from '@/hooks/useSimulations';
+import { useToast } from '@/hooks/use-toast';
 
 // ===== Simulação de Pessoas =====
 interface HiringInputs {
@@ -64,12 +66,13 @@ const defaultProducts: ProductPrice[] = [
 const baseValues = { cash: 45230, profit: 61940, margin: 18.5, totalRevenue: 430000 };
 
 export default function SimuladorCenarios() {
+  const { toast } = useToast();
+  const { saveSimulation } = useSimulations();
   const [activeTab, setActiveTab] = useState('pessoas');
   const [hiringType, setHiringType] = useState<'socio' | 'funcionario' | 'terceiro'>('funcionario');
   const [hiring, setHiring] = useState(defaultHiring);
   const [products, setProducts] = useState(defaultProducts);
   
-  // Market indices
   const [igpm, setIgpm] = useState(4.5);
   const [ipca, setIpca] = useState(3.8);
   const [inpc, setInpc] = useState(3.5);
@@ -77,16 +80,13 @@ export default function SimuladorCenarios() {
   const [selic, setSelic] = useState(10.5);
   const [cdi, setCdi] = useState(10.4);
 
-  // Random values
   const [randomMin, setRandomMin] = useState(2.0);
   const [randomMax, setRandomMax] = useState(8.0);
 
-  // Custom indices
   const [customIndices, setCustomIndices] = useState<CustomIndex[]>([]);
   const [newIndexName, setNewIndexName] = useState('');
   const [newIndexValue, setNewIndexValue] = useState('');
 
-  // ===== Cálculos Pessoas =====
   const hiringResult = useMemo(() => {
     if (hiringType === 'socio') {
       const totalCost = hiring.prolabore + hiring.comissoesSocio + hiring.reembolsos;
@@ -104,7 +104,6 @@ export default function SimuladorCenarios() {
     return { cost: totalCost, profit: monthlyProfit, margin: (monthlyProfit / baseValues.totalRevenue) * 100 };
   }, [hiring, hiringType]);
 
-  // ===== Cálculos Preços =====
   const priceResult = useMemo(() => {
     const totalCurrent = products.reduce((s, p) => s + p.currentPrice, 0);
     const totalNew = products.reduce((s, p) => s + p.currentPrice * (1 + p.adjustPercent / 100), 0);
@@ -125,11 +124,7 @@ export default function SimuladorCenarios() {
 
   const addCustomIndex = () => {
     if (!newIndexName.trim() || !newIndexValue) return;
-    setCustomIndices(prev => [...prev, {
-      id: `ci-${Date.now()}`,
-      name: newIndexName.trim(),
-      value: parseFloat(newIndexValue) || 0,
-    }]);
+    setCustomIndices(prev => [...prev, { id: `ci-${Date.now()}`, name: newIndexName.trim(), value: parseFloat(newIndexValue) || 0 }]);
     setNewIndexName('');
     setNewIndexValue('');
   };
@@ -140,6 +135,23 @@ export default function SimuladorCenarios() {
 
   const updateHiring = (key: keyof HiringInputs, value: number) => {
     setHiring(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveSimulation = async () => {
+    const isPersonas = activeTab === 'pessoas';
+    const { error } = await saveSimulation({
+      type: isPersonas ? `contratacao_${hiringType}` : 'reajuste_preco',
+      description: isPersonas
+        ? `Simulação de contratação: ${hiringType}`
+        : `Simulação de reajuste de preços`,
+      input_data: isPersonas ? { hiringType, hiring } : { products, indices: { igpm, ipca, inpc, igpdi, selic, cdi } },
+      result_data: isPersonas ? hiringResult : priceResult,
+    });
+    if (error) {
+      toast({ title: 'Erro ao salvar', description: 'Não foi possível salvar a simulação.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Simulação salva!', description: 'A simulação foi persistida no banco de dados.' });
+    }
   };
 
   const NumInput = ({ label, value, onChange, prefix, suffix }: { label: string; value: number; onChange: (v: number) => void; prefix?: string; suffix?: string }) => (
@@ -171,6 +183,11 @@ export default function SimuladorCenarios() {
     <MainLayout>
       <Header title="Simulador de Cenários" subtitle="Simule decisões estratégicas sem risco operacional" />
       <div className="p-6 space-y-6">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={handleSaveSimulation}>
+            <Save className="h-4 w-4 mr-1" /> Salvar Simulação
+          </Button>
+        </div>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-flex">
             <TabsTrigger value="pessoas" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Simulação de Pessoas</TabsTrigger>
@@ -271,9 +288,7 @@ export default function SimuladorCenarios() {
           {/* ===== PREÇOS ===== */}
           <TabsContent value="precos" className="mt-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Painel lateral de índices */}
               <div className="lg:col-span-1 space-y-4">
-                {/* Índices de Mercado */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-medium">Índices de Mercado</CardTitle>
@@ -296,7 +311,6 @@ export default function SimuladorCenarios() {
                   </CardContent>
                 </Card>
 
-                {/* Valores Aleatórios */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-medium flex items-center gap-1.5">
@@ -314,7 +328,6 @@ export default function SimuladorCenarios() {
                   </CardContent>
                 </Card>
 
-                {/* Índice Personalizado */}
                 <Card className="border-border">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-medium">Criar Índice Personalizado</CardTitle>
@@ -365,7 +378,6 @@ export default function SimuladorCenarios() {
                 </Card>
               </div>
 
-              {/* Tabela de produtos e resultados */}
               <div className="lg:col-span-2 space-y-4">
                 <Card className="border-border">
                   <CardHeader className="pb-2">
