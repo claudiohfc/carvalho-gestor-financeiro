@@ -9,7 +9,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex min-h-screen w-full bg-background">
       <Sidebar />
-      <main className="flex-1 ml-[280px] transition-all duration-300">
+      <main className="flex-1 ml-[260px] transition-all duration-300">
         {children}
       </main>
     </div>
