@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { User, Building2, Mail, LogOut, Save, Moon } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -11,6 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Perfil() {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,11 +41,13 @@ export default function Perfil() {
     });
   };
 
-  const handleLogout = () => {
-    toast({
-      title: 'Logout',
-      description: 'Você foi desconectado (simulação).',
-    });
+  const handleLogout = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({ title: 'Erro ao sair', description: error.message, variant: 'destructive' });
+    } else {
+      navigate('/login');
+    }
   };
 
   return (

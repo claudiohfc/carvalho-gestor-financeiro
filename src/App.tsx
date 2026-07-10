@@ -16,6 +16,7 @@ import DashboardAnalitico from "./pages/DashboardAnalitico";
 import DREGerencial from "./pages/DREGerencial";
 import SimuladorCenarios from "./pages/SimuladorCenarios";
 import MeusRegistros from "./pages/MeusRegistros";
+import Lancamentos from "./pages/Lancamentos";
 import Cadastros from "./pages/Cadastros";
 import Precificacao from "./pages/Precificacao";
 import AssistenteIA from "./pages/AssistenteIA";
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/dre" element={<ProtectedRoute><DREGerencial /></ProtectedRoute>} />
           <Route path="/simulador" element={<ProtectedRoute><SimuladorCenarios /></ProtectedRoute>} />
           <Route path="/registros" element={<ProtectedRoute><MeusRegistros /></ProtectedRoute>} />
+          <Route path="/lancamentos" element={<ProtectedRoute><Lancamentos /></ProtectedRoute>} />
           <Route path="/cadastros" element={<ProtectedRoute><Cadastros /></ProtectedRoute>} />
           <Route path="/precificacao" element={<ProtectedRoute><Precificacao /></ProtectedRoute>} />
           <Route path="/assistente-ia" element={<ProtectedRoute><AssistenteIA /></ProtectedRoute>} />
