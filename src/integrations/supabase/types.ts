@@ -14,348 +14,302 @@ export type Database = {
   }
   public: {
     Tables: {
-      bank_accounts: {
+      cadastros: {
         Row: {
-          account_name: string
-          bank_name: string
-          created_at: string | null
-          id: number
-          user_id: string
-        }
-        Insert: {
-          account_name: string
-          bank_name: string
-          created_at?: string | null
-          id?: never
-          user_id: string
-        }
-        Update: {
-          account_name?: string
-          bank_name?: string
-          created_at?: string | null
-          id?: never
-          user_id?: string
-        }
-        Relationships: []
-      }
-      bank_statements: {
-        Row: {
-          amount: number
-          bank_account_id: number
-          created_at: string | null
-          date: string
-          description: string | null
-          divergence_reason: string | null
-          id: number
-          matched_transaction_id: number | null
-          reconciled: boolean | null
-          type: string | null
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          bank_account_id: number
-          created_at?: string | null
-          date: string
-          description?: string | null
-          divergence_reason?: string | null
-          id?: never
-          matched_transaction_id?: number | null
-          reconciled?: boolean | null
-          type?: string | null
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          bank_account_id?: number
-          created_at?: string | null
-          date?: string
-          description?: string | null
-          divergence_reason?: string | null
-          id?: never
-          matched_transaction_id?: number | null
-          reconciled?: boolean | null
-          type?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bank_statements_bank_account_id_fkey"
-            columns: ["bank_account_id"]
-            isOneToOne: false
-            referencedRelation: "bank_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payroll_records: {
-        Row: {
-          benefits: number | null
-          commissions: number | null
-          created_at: string | null
-          decimo_terceiro_1: number | null
-          decimo_terceiro_2: number | null
-          ferias: number | null
-          fgts: number | null
-          id: number
-          inss: number | null
-          ir: number | null
-          person_id: number
-          pro_labore: number | null
-          reference_month: string
-          reimbursements: number | null
-          salary: number | null
-          total_cost: number | null
-          user_id: string
-          vale_alimentacao: number | null
-          vale_transporte: number | null
-        }
-        Insert: {
-          benefits?: number | null
-          commissions?: number | null
-          created_at?: string | null
-          decimo_terceiro_1?: number | null
-          decimo_terceiro_2?: number | null
-          ferias?: number | null
-          fgts?: number | null
-          id?: never
-          inss?: number | null
-          ir?: number | null
-          person_id: number
-          pro_labore?: number | null
-          reference_month: string
-          reimbursements?: number | null
-          salary?: number | null
-          total_cost?: number | null
-          user_id: string
-          vale_alimentacao?: number | null
-          vale_transporte?: number | null
-        }
-        Update: {
-          benefits?: number | null
-          commissions?: number | null
-          created_at?: string | null
-          decimo_terceiro_1?: number | null
-          decimo_terceiro_2?: number | null
-          ferias?: number | null
-          fgts?: number | null
-          id?: never
-          inss?: number | null
-          ir?: number | null
-          person_id?: number
-          pro_labore?: number | null
-          reference_month?: string
-          reimbursements?: number | null
-          salary?: number | null
-          total_cost?: number | null
-          user_id?: string
-          vale_alimentacao?: number | null
-          vale_transporte?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payroll_records_person_id_fkey"
-            columns: ["person_id"]
-            isOneToOne: false
-            referencedRelation: "people"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      people: {
-        Row: {
-          active: boolean | null
-          cpf: string | null
-          created_at: string | null
+          categoria: string | null
+          cpf_cnpj: string | null
+          created_at: string
           email: string | null
-          end_date: string | null
-          id: number
-          name: string
-          phone: string | null
-          start_date: string | null
-          type: string
+          id: string
+          nome: string
+          status: string | null
+          telefone: string | null
+          tipo: string
           user_id: string
         }
         Insert: {
-          active?: boolean | null
-          cpf?: string | null
-          created_at?: string | null
+          categoria?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string
           email?: string | null
-          end_date?: string | null
-          id?: never
-          name: string
-          phone?: string | null
-          start_date?: string | null
-          type: string
+          id?: string
+          nome: string
+          status?: string | null
+          telefone?: string | null
+          tipo: string
           user_id: string
         }
         Update: {
-          active?: boolean | null
-          cpf?: string | null
-          created_at?: string | null
+          categoria?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string
           email?: string | null
-          end_date?: string | null
-          id?: never
-          name?: string
-          phone?: string | null
-          start_date?: string | null
-          type?: string
+          id?: string
+          nome?: string
+          status?: string | null
+          telefone?: string | null
+          tipo?: string
           user_id?: string
         }
         Relationships: []
       }
-      products_services: {
+      conciliacoes: {
         Row: {
-          base_cost: number | null
-          category: string | null
-          code: string | null
-          created_at: string | null
-          description: string | null
-          final_price: number | null
-          fixed_costs: number | null
-          id: number
-          labor_percent: number | null
-          labor_value: number | null
-          markup: number | null
-          name: string
-          preparation_hour_value: number | null
-          preparation_time: number | null
-          profit_margin: number | null
-          tax_type: string | null
-          tax_value: number | null
-          type: string
-          unit_measure: string | null
+          banco: string | null
+          created_at: string
+          id: string
+          nome_conta: string | null
           user_id: string
-          variable_costs: number | null
         }
         Insert: {
-          base_cost?: number | null
-          category?: string | null
-          code?: string | null
-          created_at?: string | null
-          description?: string | null
-          final_price?: number | null
-          fixed_costs?: number | null
-          id?: never
-          labor_percent?: number | null
-          labor_value?: number | null
-          markup?: number | null
-          name: string
-          preparation_hour_value?: number | null
-          preparation_time?: number | null
-          profit_margin?: number | null
-          tax_type?: string | null
-          tax_value?: number | null
-          type: string
-          unit_measure?: string | null
+          banco?: string | null
+          created_at?: string
+          id?: string
+          nome_conta?: string | null
           user_id: string
-          variable_costs?: number | null
         }
         Update: {
-          base_cost?: number | null
-          category?: string | null
-          code?: string | null
-          created_at?: string | null
-          description?: string | null
-          final_price?: number | null
-          fixed_costs?: number | null
-          id?: never
-          labor_percent?: number | null
-          labor_value?: number | null
-          markup?: number | null
-          name?: string
-          preparation_hour_value?: number | null
-          preparation_time?: number | null
-          profit_margin?: number | null
-          tax_type?: string | null
-          tax_value?: number | null
-          type?: string
-          unit_measure?: string | null
+          banco?: string | null
+          created_at?: string
+          id?: string
+          nome_conta?: string | null
           user_id?: string
-          variable_costs?: number | null
         }
         Relationships: []
       }
-      scenario_simulations: {
+      extrato_linhas: {
         Row: {
-          created_at: string | null
-          description: string | null
-          id: number
+          categoria_sugerida: string | null
+          cliente_fornecedor_sugerido: string | null
+          conciliado: boolean | null
+          confianca_classificacao: number | null
+          created_at: string
+          data: string
+          descricao: string
+          divergencia_motivo: string | null
+          extrato_id: string | null
+          id: string
+          lancamento_id: string | null
+          subcategoria_sugerida: string | null
+          tipo: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria_sugerida?: string | null
+          cliente_fornecedor_sugerido?: string | null
+          conciliado?: boolean | null
+          confianca_classificacao?: number | null
+          created_at?: string
+          data: string
+          descricao: string
+          divergencia_motivo?: string | null
+          extrato_id?: string | null
+          id?: string
+          lancamento_id?: string | null
+          subcategoria_sugerida?: string | null
+          tipo?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          categoria_sugerida?: string | null
+          cliente_fornecedor_sugerido?: string | null
+          conciliado?: boolean | null
+          confianca_classificacao?: number | null
+          created_at?: string
+          data?: string
+          descricao?: string
+          divergencia_motivo?: string | null
+          extrato_id?: string | null
+          id?: string
+          lancamento_id?: string | null
+          subcategoria_sugerida?: string | null
+          tipo?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extrato_linhas_extrato_id_fkey"
+            columns: ["extrato_id"]
+            isOneToOne: false
+            referencedRelation: "extratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extrato_linhas_lancamento_id_fkey"
+            columns: ["lancamento_id"]
+            isOneToOne: false
+            referencedRelation: "lancamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      extratos: {
+        Row: {
+          arquivo_nome: string | null
+          banco: string | null
+          data_importacao: string
+          id: string
+          nome_conta: string | null
+          status: string | null
+          total_conciliados: number | null
+          total_registros: number | null
+          user_id: string
+        }
+        Insert: {
+          arquivo_nome?: string | null
+          banco?: string | null
+          data_importacao?: string
+          id?: string
+          nome_conta?: string | null
+          status?: string | null
+          total_conciliados?: number | null
+          total_registros?: number | null
+          user_id: string
+        }
+        Update: {
+          arquivo_nome?: string | null
+          banco?: string | null
+          data_importacao?: string
+          id?: string
+          nome_conta?: string | null
+          status?: string | null
+          total_conciliados?: number | null
+          total_registros?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lancamentos: {
+        Row: {
+          categoria: string
+          centro_custo: string | null
+          cliente_fornecedor: string | null
+          conciliado: boolean | null
+          created_at: string
+          data: string
+          data_vencimento: string | null
+          descricao: string
+          forma_pagamento: string | null
+          id: string
+          num_documento: string | null
+          observacoes: string | null
+          origem: string | null
+          subcategoria: string | null
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          centro_custo?: string | null
+          cliente_fornecedor?: string | null
+          conciliado?: boolean | null
+          created_at?: string
+          data: string
+          data_vencimento?: string | null
+          descricao: string
+          forma_pagamento?: string | null
+          id?: string
+          num_documento?: string | null
+          observacoes?: string | null
+          origem?: string | null
+          subcategoria?: string | null
+          tipo: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          centro_custo?: string | null
+          cliente_fornecedor?: string | null
+          conciliado?: boolean | null
+          created_at?: string
+          data?: string
+          data_vencimento?: string | null
+          descricao?: string
+          forma_pagamento?: string | null
+          id?: string
+          num_documento?: string | null
+          observacoes?: string | null
+          origem?: string | null
+          subcategoria?: string | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      regras_classificacao: {
+        Row: {
+          ativo: boolean | null
+          categoria: string
+          cliente_fornecedor: string | null
+          created_at: string
+          id: string
+          palavra_chave: string
+          prioridade: number | null
+          subcategoria: string | null
+          tipo: string | null
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria: string
+          cliente_fornecedor?: string | null
+          created_at?: string
+          id?: string
+          palavra_chave: string
+          prioridade?: number | null
+          subcategoria?: string | null
+          tipo?: string | null
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string
+          cliente_fornecedor?: string | null
+          created_at?: string
+          id?: string
+          palavra_chave?: string
+          prioridade?: number | null
+          subcategoria?: string | null
+          tipo?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      simulacoes: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
           input_data: Json | null
           result_data: Json | null
-          type: string
+          tipo: string
           user_id: string
         }
         Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: never
+          created_at?: string
+          descricao?: string | null
+          id?: string
           input_data?: Json | null
           result_data?: Json | null
-          type: string
+          tipo: string
           user_id: string
         }
         Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: never
+          created_at?: string
+          descricao?: string | null
+          id?: string
           input_data?: Json | null
           result_data?: Json | null
-          type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      transactions: {
-        Row: {
-          amount: number
-          category: string
-          client_or_supplier: string | null
-          cost_center: string | null
-          created_at: string | null
-          date: string
-          description: string
-          id: number
-          notes: string | null
-          payment_method: string | null
-          recurring: boolean | null
-          subcategory: string | null
-          tags: string[] | null
-          type: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          category: string
-          client_or_supplier?: string | null
-          cost_center?: string | null
-          created_at?: string | null
-          date: string
-          description: string
-          id?: never
-          notes?: string | null
-          payment_method?: string | null
-          recurring?: boolean | null
-          subcategory?: string | null
-          tags?: string[] | null
-          type: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          category?: string
-          client_or_supplier?: string | null
-          cost_center?: string | null
-          created_at?: string | null
-          date?: string
-          description?: string
-          id?: never
-          notes?: string | null
-          payment_method?: string | null
-          recurring?: boolean | null
-          subcategory?: string | null
-          tags?: string[] | null
-          type?: string
+          tipo?: string
           user_id?: string
         }
         Relationships: []

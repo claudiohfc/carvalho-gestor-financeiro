@@ -1,16 +1,32 @@
-Verificar as seis correções solicitadas e confirmar que já estão aplicadas no repositório, validando a consistência com uma build.
 
-Todas as alterações solicitadas já foram encontradas no estado atual do código:
+## Objetivo
+Substituir o schema atual (transactions, people, bank_accounts, bank_statements, scenario_simulations, payroll_records, products_services) pelo novo schema em PT-BR solicitado, adaptado às regras do projeto (GRANTs, políticas SELECT/INSERT/UPDATE/DELETE separadas, trigger de updated_at).
 
-1. src/App.tsx — import de `Lancamentos` e rota `/lancamentos` já estão presentes.
-2. src/App.css — contém apenas o comentário limpo, sem `max-width` ou `text-align` no `#root`.
-3. src/pages/Perfil.tsx — já importa `useNavigate` e `useAuth`, e `handleLogout` chama `signOut()` + `navigate('/login')` com tratamento de erro.
-4. src/components/layout/MainLayout.tsx — já usa `ml-[260px]` sincronizado com a largura da sidebar expandida.
-5. src/vite-env.d.ts — já existe com o conteúdo correto; `src/viteenvd.ts` não existe mais.
-6. src/components/ui/sonner.tsx — já usa apenas `sonner`, sem dependência de `next-themes`.
+## Aviso importante
+- **Perda de dados:** DROP das tabelas antigas apaga todos os registros existentes. Não há backup automático.
+- **Código quebrará temporariamente:** hooks e páginas usam as tabelas antigas (`useTransactions`, `usePeople`, `useBankReconciliation`, `usePayroll`, `usePricing`, `useSimulations`) — após a migração, o app não vai compilar/rodar até refatorarmos o código para as novas tabelas. Isso é um trabalho grande e será feito num próximo passo, não nesta migração.
 
-Em build mode:
-- Revisar rapidamente cada um dos seis arquivos.
-- Rodar a build/typecheck para garantir que não há erros de compilação.
-- Aplicar apenas correções mínimas caso alguma inconsistência apareça durante a validação.
-- Confirmar ao usuário quais arquivos foram verificados e que a build passou.
+## Migração (uma chamada única do supabase--migration)
+
+1. **DROP** em cascata: `transactions`, `people`, `bank_accounts`, `bank_statements`, `scenario_simulations`, `payroll_records`, `products_services`.
+2. **CREATE TABLE** conforme o SQL do usuário, com pequenas correções:
+   - Adicionar `updated_at TIMESTAMPTZ` onde faltar (apenas em `lancamentos` conforme original).
+   - `user_id UUID NOT NULL` (sem `ON DELETE CASCADE` para auth.users — segue convenção do projeto de não referenciar auth.users diretamente; usar apenas `NOT NULL` e validar via RLS).
+3. **GRANT** para cada tabela pública:
+   ```
+   GRANT SELECT, INSERT, UPDATE, DELETE ON public.<t> TO authenticated;
+   GRANT ALL ON public.<t> TO service_role;
+   ```
+4. **ENABLE RLS** em todas as 7 tabelas.
+5. **Políticas** — trocar `FOR ALL` por 4 políticas separadas (SELECT, INSERT, UPDATE, DELETE) usando `auth.uid() = user_id`, conforme boas práticas do projeto.
+6. **Índices** conforme solicitado.
+7. **Trigger `update_updated_at_column()`** aplicado em `lancamentos`.
+
+## Tabelas criadas
+`lancamentos`, `cadastros`, `extratos`, `extrato_linhas`, `regras_classificacao`, `simulacoes`, `conciliacoes`.
+
+## Fora do escopo desta etapa
+- Refatorar hooks (`useTransactions` → `useLancamentos`, etc.) e páginas para o novo schema.
+- Regenerar tipos: acontece automaticamente após aprovação da migração.
+
+Depois de você aprovar e a migração rodar, te aviso o que quebrou no código e proponho um segundo plano para adaptar os hooks/páginas.
