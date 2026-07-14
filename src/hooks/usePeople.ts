@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+// Stub: tabela people foi removida. Aguardando refatoração.
+import { useState, useCallback } from 'react';
 
 export interface DbPerson {
   id: number;
@@ -17,55 +16,9 @@ export interface DbPerson {
 }
 
 export function usePeople() {
-  const { user } = useAuth();
-  const [people, setPeople] = useState<DbPerson[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchPeople = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('people')
-      .select('*')
-      .order('name');
-    if (!error && data) setPeople(data as unknown as DbPerson[]);
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => {
-    fetchPeople();
-  }, [fetchPeople]);
-
-  const addPerson = useCallback(async (person: Omit<DbPerson, 'id' | 'user_id' | 'created_at'>) => {
-    if (!user) return { error: new Error('Not authenticated') };
-    const { data, error } = await supabase
-      .from('people')
-      .insert({ ...person, user_id: user.id } as any)
-      .select()
-      .single();
-    if (!error) await fetchPeople();
-    return { data, error };
-  }, [user, fetchPeople]);
-
-  const updatePerson = useCallback(async (id: number, updates: Partial<DbPerson>) => {
-    const { data, error } = await supabase
-      .from('people')
-      .update(updates as any)
-      .eq('id', id)
-      .select()
-      .single();
-    if (!error) await fetchPeople();
-    return { data, error };
-  }, [fetchPeople]);
-
-  const deletePerson = useCallback(async (id: number) => {
-    const { error } = await supabase
-      .from('people')
-      .delete()
-      .eq('id', id);
-    if (!error) await fetchPeople();
-    return { error };
-  }, [fetchPeople]);
-
-  return { people, loading, addPerson, updatePerson, deletePerson, refetch: fetchPeople };
+  const [people] = useState<DbPerson[]>([]);
+  const [loading] = useState(false);
+  const err = useCallback(async () => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
+  const noop = useCallback(async () => {}, []);
+  return { people, loading, addPerson: err, updatePerson: err, deletePerson: err, refetch: noop };
 }
