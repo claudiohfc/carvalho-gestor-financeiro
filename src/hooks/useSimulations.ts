@@ -14,7 +14,7 @@ export interface Simulation {
 export function useSimulations() {
   const [simulations] = useState<Simulation[]>([]);
   const [loading] = useState(false);
-  const err = useCallback(async () => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
-  const noop = useCallback(async () => {}, []);
+  const err = useCallback(async (..._args: any[]) => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
+  const noop = useCallback(async (..._args: any[]) => {}, []);
   return { simulations, loading, fetchSimulations: noop, saveSimulation: err, deleteSimulation: err };
 }

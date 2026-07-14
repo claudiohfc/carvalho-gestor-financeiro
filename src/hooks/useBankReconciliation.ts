@@ -29,9 +29,9 @@ export function useBankReconciliation() {
   const [statements] = useState<BankStatement[]>([]);
   const [loading] = useState(false);
 
-  const noop = useCallback(async () => {}, []);
-  const noopWithArg = useCallback(async (_?: unknown) => {}, []);
-  const returnError = useCallback(async () => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
+  const noop = useCallback(async (..._args: any[]) => {}, []);
+  const noopWithArg = useCallback(async (..._args: any[]) => {}, []);
+  const returnError = useCallback(async (..._args: any[]) => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
 
   return {
     accounts,

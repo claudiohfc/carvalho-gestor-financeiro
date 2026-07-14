@@ -22,7 +22,7 @@ export interface DbTransaction {
 export function useTransactions() {
   const [transactions] = useState<DbTransaction[]>([]);
   const [loading] = useState(false);
-  const err = useCallback(async () => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
-  const noop = useCallback(async () => {}, []);
+  const err = useCallback(async (..._args: any[]) => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
+  const noop = useCallback(async (..._args: any[]) => {}, []);
   return { transactions, loading, addTransaction: err, updateTransaction: err, deleteTransaction: err, refetch: noop };
 }

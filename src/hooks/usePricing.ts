@@ -28,7 +28,7 @@ export interface ProductService {
 export function usePricing() {
   const [items] = useState<ProductService[]>([]);
   const [loading] = useState(false);
-  const err = useCallback(async () => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
-  const noop = useCallback(async () => {}, []);
+  const err = useCallback(async (..._args: any[]) => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
+  const noop = useCallback(async (..._args: any[]) => {}, []);
   return { items, loading, fetchItems: noop, addItem: err, updateItem: err, deleteItem: err };
 }

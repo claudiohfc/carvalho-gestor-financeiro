@@ -18,7 +18,7 @@ export interface DbPerson {
 export function usePeople() {
   const [people] = useState<DbPerson[]>([]);
   const [loading] = useState(false);
-  const err = useCallback(async () => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
-  const noop = useCallback(async () => {}, []);
+  const err = useCallback(async (..._args: any[]) => ({ error: new Error('Aguardando migração para o novo schema') as any, data: undefined as any }), []);
+  const noop = useCallback(async (..._args: any[]) => {}, []);
   return { people, loading, addPerson: err, updatePerson: err, deletePerson: err, refetch: noop };
 }
