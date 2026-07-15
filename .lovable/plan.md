@@ -1,32 +1,36 @@
-
 ## Objetivo
-Substituir o schema atual (transactions, people, bank_accounts, bank_statements, scenario_simulations, payroll_records, products_services) pelo novo schema em PT-BR solicitado, adaptado às regras do projeto (GRANTs, políticas SELECT/INSERT/UPDATE/DELETE separadas, trigger de updated_at).
+Migrar hooks e páginas dos stubs atuais para as 7 novas tabelas (`lancamentos`, `cadastros`, `extratos`, `extrato_linhas`, `regras_classificacao`, `simulacoes`, `conciliacoes`), restaurando persistência real de dados.
 
-## Aviso importante
-- **Perda de dados:** DROP das tabelas antigas apaga todos os registros existentes. Não há backup automático.
-- **Código quebrará temporariamente:** hooks e páginas usam as tabelas antigas (`useTransactions`, `usePeople`, `useBankReconciliation`, `usePayroll`, `usePricing`, `useSimulations`) — após a migração, o app não vai compilar/rodar até refatorarmos o código para as novas tabelas. Isso é um trabalho grande e será feito num próximo passo, não nesta migração.
+## Escopo grande — proponho executar em 4 fases, uma por resposta
 
-## Migração (uma chamada única do supabase--migration)
+Cada fase é aprovada/entregue separadamente para você validar antes de seguir. Assim evitamos um PR gigante impossível de revisar.
 
-1. **DROP** em cascata: `transactions`, `people`, `bank_accounts`, `bank_statements`, `scenario_simulations`, `payroll_records`, `products_services`.
-2. **CREATE TABLE** conforme o SQL do usuário, com pequenas correções:
-   - Adicionar `updated_at TIMESTAMPTZ` onde faltar (apenas em `lancamentos` conforme original).
-   - `user_id UUID NOT NULL` (sem `ON DELETE CASCADE` para auth.users — segue convenção do projeto de não referenciar auth.users diretamente; usar apenas `NOT NULL` e validar via RLS).
-3. **GRANT** para cada tabela pública:
-   ```
-   GRANT SELECT, INSERT, UPDATE, DELETE ON public.<t> TO authenticated;
-   GRANT ALL ON public.<t> TO service_role;
-   ```
-4. **ENABLE RLS** em todas as 7 tabelas.
-5. **Políticas** — trocar `FOR ALL` por 4 políticas separadas (SELECT, INSERT, UPDATE, DELETE) usando `auth.uid() = user_id`, conforme boas práticas do projeto.
-6. **Índices** conforme solicitado.
-7. **Trigger `update_updated_at_column()`** aplicado em `lancamentos`.
+### Fase 1 — Núcleo transacional (`lancamentos` + `cadastros`)
+Impacto: página **Meus Registros**, **Lançamentos**, formulário `RegistroFormDialog`, e a página **Cadastros**.
 
-## Tabelas criadas
-`lancamentos`, `cadastros`, `extratos`, `extrato_linhas`, `regras_classificacao`, `simulacoes`, `conciliacoes`.
+- Criar `src/hooks/useLancamentos.ts` (CRUD com filtros por data/tipo/categoria).
+- Criar `src/hooks/useCadastros.ts` (CRUD clientes/fornecedores/sócios/funcionários).
+- Refatorar `MeusRegistros.tsx` e `RegistroFormDialog.tsx` para usar `useLancamentos` + `useCadastros` (campos: `tipo`, `data`, `data_vencimento`, `descricao`, `categoria`, `subcategoria`, `valor`, `centro_custo`, `cliente_fornecedor`, `forma_pagamento`, `origem`, `num_documento`, `observacoes`, `status`, `conciliado`).
+- Refatorar `Lancamentos.tsx` e `Cadastros.tsx` para persistir no backend.
+- Remover o stub `useTransactions.ts` (e o `usePeople.ts`) após portar as chamadas.
 
-## Fora do escopo desta etapa
-- Refatorar hooks (`useTransactions` → `useLancamentos`, etc.) e páginas para o novo schema.
-- Regenerar tipos: acontece automaticamente após aprovação da migração.
+### Fase 2 — Conciliação bancária (`extratos`, `extrato_linhas`, `conciliacoes`, `regras_classificacao`)
+Impacto: página **Conciliação**, importação de extratos.
 
-Depois de você aprovar e a migração rodar, te aviso o que quebrou no código e proponho um segundo plano para adaptar os hooks/páginas.
+- Criar `useExtratos`, `useExtratoLinhas`, `useConciliacoes`, `useRegrasClassificacao`.
+- Refatorar `ConciliacaoBancaria.tsx` e `Importacao.tsx` (para OFX/CSV → `extrato_linhas`).
+- Auto-match linha↔lançamento por valor + data aproximada, gravando `lancamento_id` e `conciliado=true`.
+- Remover stub `useBankReconciliation.ts`.
+
+### Fase 3 — Simulações (`simulacoes`)
+- Criar `useSimulacoesDB` real (salvar/listar/apagar cenários com `input_data`/`result_data` JSONB).
+- Refatorar `SimuladorCenarios.tsx` para persistir.
+- Remover stub `useSimulations.ts`.
+
+### Fase 4 — Dashboards + limpeza
+- Trocar `mockData` por agregações reais em `Home`, `DashboardFinanceiro`, `DashboardAnalitico`, `DREGerencial`, `DashboardFiscal`, `DashboardAdministrativo` (queries agregadas sobre `lancamentos`).
+- Remover stubs restantes (`usePayroll.ts`, `usePricing.ts` — se decidirmos manter fora do escopo do novo schema, viram flag "sem persistência" explícita).
+- Ajustar tipos/labels e remover mocks obsoletos.
+
+## O que decidir agora
+Confirma que começo pela **Fase 1** já nesta próxima resposta? Se preferir outra ordem (ex.: começar pela Conciliação, já que você está nessa tela agora — rota `/conciliacao`), é só dizer.
