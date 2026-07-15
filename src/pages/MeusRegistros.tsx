@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Eye, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Search, Loader2 } from 'lucide-react';
 import { RegistroFormDialog } from '@/components/registros/RegistroFormDialog';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -40,60 +40,57 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { transactions, Transaction, categories } from '@/data/mockData';
+import { categories } from '@/data/mockData';
+import { useLancamentos, type Lancamento } from '@/hooks/useLancamentos';
 import { cn } from '@/lib/utils';
 
 export default function MeusRegistros() {
   const { toast } = useToast();
-  const [data, setData] = useState<Transaction[]>(transactions);
+  const { lancamentos, loading, deleteLancamento } = useLancamentos();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<Transaction | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<Lancamento | null>(null);
 
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
+    return lancamentos.filter((item) => {
+      const search = searchTerm.toLowerCase();
       const matchesSearch =
-        item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = typeFilter === 'all' || item.type === typeFilter;
-      const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+        item.descricao.toLowerCase().includes(search) ||
+        item.categoria.toLowerCase().includes(search);
+      const matchesType = typeFilter === 'all' || item.tipo === typeFilter;
+      const matchesCategory = categoryFilter === 'all' || item.categoria === categoryFilter;
       return matchesSearch && matchesType && matchesCategory;
     });
-  }, [data, searchTerm, typeFilter, categoryFilter]);
+  }, [lancamentos, searchTerm, typeFilter, categoryFilter]);
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR');
-  };
+  const formatDate = (dateStr: string) => new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
 
-  const handleView = (record: Transaction) => {
+  const handleView = (record: Lancamento) => {
     setSelectedRecord(record);
     setViewDialogOpen(true);
   };
 
-  const handleDelete = (record: Transaction) => {
+  const handleDelete = (record: Lancamento) => {
     setSelectedRecord(record);
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (selectedRecord) {
-      setData(data.filter((item) => item.id !== selectedRecord.id));
-      toast({
-        title: 'Registro excluído',
-        description: 'O registro foi removido com sucesso.',
-      });
-      setDeleteDialogOpen(false);
-      setSelectedRecord(null);
+  const confirmDelete = async () => {
+    if (!selectedRecord) return;
+    const { error } = await deleteLancamento(selectedRecord.id);
+    if (error) {
+      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Registro excluído', description: 'O registro foi removido com sucesso.' });
     }
+    setDeleteDialogOpen(false);
+    setSelectedRecord(null);
   };
 
   return (
@@ -101,7 +98,6 @@ export default function MeusRegistros() {
       <Header title="Meus Registros" subtitle="Todos os lançamentos financeiros" />
 
       <div className="p-8 space-y-6">
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="flex flex-1 gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[250px]">
@@ -138,7 +134,7 @@ export default function MeusRegistros() {
             </Select>
           </div>
           <div className="flex gap-2">
-            <RegistroFormDialog onAdd={(tx) => setData(prev => [tx, ...prev])} />
+            <RegistroFormDialog />
             <Button className="bg-primary hover:bg-primary/90" asChild>
               <a href="/lancamentos">
                 <Plus className="h-4 w-4 mr-2" />
@@ -148,7 +144,6 @@ export default function MeusRegistros() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="glass-card rounded-xl border border-border overflow-hidden">
           <Table>
             <TableHeader>
@@ -163,41 +158,47 @@ export default function MeusRegistros() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    <Loader2 className="inline h-5 w-5 animate-spin" /> Carregando...
+                  </TableCell>
+                </TableRow>
+              ) : filteredData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredData.slice(0, 20).map((record) => (
+                filteredData.slice(0, 50).map((record) => (
                   <TableRow key={record.id} className="table-row-hover border-border">
-                    <TableCell className="text-foreground">{formatDate(record.date)}</TableCell>
+                    <TableCell className="text-foreground">{formatDate(record.data)}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
                         className={cn(
-                          record.type === 'entrada'
+                          record.tipo === 'entrada'
                             ? 'border-success/30 bg-success/10 text-success'
                             : 'border-destructive/30 bg-destructive/10 text-destructive'
                         )}
                       >
-                        {record.type === 'entrada' ? 'Entrada' : 'Saída'}
+                        {record.tipo === 'entrada' ? 'Entrada' : 'Saída'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-foreground max-w-[200px] truncate">
-                      {record.description}
+                      {record.descricao}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{record.category}</TableCell>
-                    <TableCell className="text-muted-foreground">{record.costCenter}</TableCell>
+                    <TableCell className="text-muted-foreground">{record.categoria}</TableCell>
+                    <TableCell className="text-muted-foreground">{record.centro_custo || '-'}</TableCell>
                     <TableCell
                       className={cn(
                         'text-right font-medium',
-                        record.type === 'entrada' ? 'text-success' : 'text-destructive'
+                        record.tipo === 'entrada' ? 'text-success' : 'text-destructive'
                       )}
                     >
-                      {record.type === 'entrada' ? '+' : '-'}
-                      {formatCurrency(record.value)}
+                      {record.tipo === 'entrada' ? '+' : '-'}
+                      {formatCurrency(Number(record.valor))}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
@@ -208,13 +209,6 @@ export default function MeusRegistros() {
                           onClick={() => handleView(record)}
                         >
                           <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        >
-                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -233,14 +227,13 @@ export default function MeusRegistros() {
           </Table>
         </div>
 
-        {filteredData.length > 20 && (
+        {filteredData.length > 50 && (
           <p className="text-center text-sm text-muted-foreground">
-            Mostrando 20 de {filteredData.length} registros
+            Mostrando 50 de {filteredData.length} registros
           </p>
         )}
       </div>
 
-      {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
@@ -252,52 +245,58 @@ export default function MeusRegistros() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Data</p>
-                  <p className="font-medium">{formatDate(selectedRecord.date)}</p>
+                  <p className="font-medium">{formatDate(selectedRecord.data)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Tipo</p>
                   <Badge
                     variant="outline"
                     className={cn(
-                      selectedRecord.type === 'entrada'
+                      selectedRecord.tipo === 'entrada'
                         ? 'border-success/30 bg-success/10 text-success'
                         : 'border-destructive/30 bg-destructive/10 text-destructive'
                     )}
                   >
-                    {selectedRecord.type === 'entrada' ? 'Entrada' : 'Saída'}
+                    {selectedRecord.tipo === 'entrada' ? 'Entrada' : 'Saída'}
                   </Badge>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Descrição</p>
-                  <p className="font-medium">{selectedRecord.description}</p>
+                  <p className="font-medium">{selectedRecord.descricao}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Categoria</p>
-                  <p className="font-medium">{selectedRecord.category}</p>
+                  <p className="font-medium">{selectedRecord.categoria}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Subcategoria</p>
-                  <p className="font-medium">{selectedRecord.subcategory}</p>
+                  <p className="font-medium">{selectedRecord.subcategoria || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Centro de Custo</p>
-                  <p className="font-medium">{selectedRecord.costCenter}</p>
+                  <p className="font-medium">{selectedRecord.centro_custo || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Valor</p>
                   <p
                     className={cn(
                       'font-semibold text-lg',
-                      selectedRecord.type === 'entrada' ? 'text-success' : 'text-destructive'
+                      selectedRecord.tipo === 'entrada' ? 'text-success' : 'text-destructive'
                     )}
                   >
-                    {formatCurrency(selectedRecord.value)}
+                    {formatCurrency(Number(selectedRecord.valor))}
                   </p>
                 </div>
-                {selectedRecord.clientOrSupplier && (
+                {selectedRecord.cliente_fornecedor && (
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">Cliente/Fornecedor</p>
-                    <p className="font-medium">{selectedRecord.clientOrSupplier}</p>
+                    <p className="font-medium">{selectedRecord.cliente_fornecedor}</p>
+                  </div>
+                )}
+                {selectedRecord.observacoes && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-muted-foreground">Observações</p>
+                    <p className="font-medium">{selectedRecord.observacoes}</p>
                   </div>
                 )}
               </div>
@@ -311,7 +310,6 @@ export default function MeusRegistros() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
@@ -322,10 +320,7 @@ export default function MeusRegistros() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="bg-secondary">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

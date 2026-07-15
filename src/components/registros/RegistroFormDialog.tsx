@@ -24,41 +24,41 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Transaction, categories, subcategories, costCenters, clients } from '@/data/mockData';
+import { categories, subcategories, costCenters } from '@/data/mockData';
+import { useLancamentos } from '@/hooks/useLancamentos';
+import { useCadastros } from '@/hooks/useCadastros';
 import { cn } from '@/lib/utils';
 
-const entradaCategories = categories.filter(c =>
+const entradaCategories = categories.filter((c) =>
   ['Receita de Serviços', 'Consultoria', 'Treinamentos', 'Workshops', 'Palestras'].includes(c)
 );
-const saidaCategories = categories.filter(c =>
+const saidaCategories = categories.filter((c) =>
   ['Despesas Administrativas', 'Despesas com Pessoal', 'Marketing', 'Tecnologia', 'Impostos', 'Outros'].includes(c)
 );
-
-const clientesList = clients.filter(c => c.type === 'cliente');
-const fornecedoresList = clients.filter(c => c.type === 'fornecedor');
 
 const paymentMethods = ['Boleto', 'Transferência', 'PIX', 'Cartão de Crédito', 'Cartão de Débito', 'Débito Automático'];
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-interface Props {
-  onAdd: (transaction: Transaction) => void;
-}
-
-export function RegistroFormDialog({ onAdd }: Props) {
+export function RegistroFormDialog() {
   const { toast } = useToast();
+  const { addLancamento } = useLancamentos();
+  const { cadastros } = useCadastros();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'entrada' | 'saida'>('entrada');
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [saving, setSaving] = useState(false);
 
-  // Entrada fields
+  const clientesList = cadastros.filter((c) => c.tipo === 'cliente');
+  const fornecedoresList = cadastros.filter((c) => c.tipo === 'fornecedor');
+
+  // Entrada
   const [nfNumero, setNfNumero] = useState('');
   const [nfSerie, setNfSerie] = useState('');
   const [dataEmissao, setDataEmissao] = useState('');
   const [dataVencimentoE, setDataVencimentoE] = useState('');
   const [clienteId, setClienteId] = useState('');
-  const [cnpjCliente, setCnpjCliente] = useState('');
   const [descricaoE, setDescricaoE] = useState('');
   const [categoriaE, setCategoriaE] = useState('');
   const [subcategoriaE, setSubcategoriaE] = useState('');
@@ -68,11 +68,10 @@ export function RegistroFormDialog({ onAdd }: Props) {
   const [centroCustoE, setCentroCustoE] = useState('');
   const [observacoesE, setObservacoesE] = useState('');
 
-  // Saída fields
+  // Saída
   const [dataPagamento, setDataPagamento] = useState('');
   const [dataVencimentoS, setDataVencimentoS] = useState('');
   const [fornecedorId, setFornecedorId] = useState('');
-  const [cnpjFornecedor, setCnpjFornecedor] = useState('');
   const [descricaoS, setDescricaoS] = useState('');
   const [categoriaS, setCategoriaS] = useState('');
   const [subcategoriaS, setSubcategoriaS] = useState('');
@@ -86,7 +85,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
     const total = parseFloat(valorTotal) || 0;
     const iss = parseFloat(issPercent) || 0;
     const irrf = parseFloat(irrfPercent) || 0;
-    return total - (total * iss / 100) - (total * irrf / 100);
+    return total - (total * iss) / 100 - (total * irrf) / 100;
   }, [valorTotal, issPercent, irrfPercent]);
 
   const subcatsE = subcategories[categoriaE] || [];
@@ -94,11 +93,11 @@ export function RegistroFormDialog({ onAdd }: Props) {
 
   const resetForm = () => {
     setNfNumero(''); setNfSerie(''); setDataEmissao(''); setDataVencimentoE('');
-    setClienteId(''); setCnpjCliente(''); setDescricaoE(''); setCategoriaE('');
+    setClienteId(''); setDescricaoE(''); setCategoriaE('');
     setSubcategoriaE(''); setValorTotal(''); setIssPercent(''); setIrrfPercent('');
     setCentroCustoE(''); setObservacoesE('');
     setDataPagamento(''); setDataVencimentoS(''); setFornecedorId('');
-    setCnpjFornecedor(''); setDescricaoS(''); setCategoriaS(''); setSubcategoriaS('');
+    setDescricaoS(''); setCategoriaS(''); setSubcategoriaS('');
     setValorS(''); setFormaPagamento(''); setNumDocumento(''); setCentroCustoS('');
     setObservacoesS('');
     setErrors({});
@@ -111,7 +110,6 @@ export function RegistroFormDialog({ onAdd }: Props) {
       if (!dataEmissao) errs.dataEmissao = true;
       if (!dataVencimentoE) errs.dataVencimentoE = true;
       if (!clienteId) errs.clienteId = true;
-      if (!cnpjCliente) errs.cnpjCliente = true;
       if (!descricaoE) errs.descricaoE = true;
       if (!categoriaE) errs.categoriaE = true;
       if (!valorTotal) errs.valorTotal = true;
@@ -128,44 +126,59 @@ export function RegistroFormDialog({ onAdd }: Props) {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
+    setSaving(true);
 
-    const id = `t-new-${Date.now()}`;
-
+    let error;
     if (tab === 'entrada') {
-      const cliente = clientesList.find(c => c.id === clienteId);
-      const tx: Transaction = {
-        id,
-        date: dataEmissao,
-        type: 'entrada',
-        description: descricaoE,
-        category: categoriaE,
-        subcategory: subcategoriaE || '',
-        value: valorLiquido,
-        costCenter: centroCustoE || 'Operacional',
-        clientOrSupplier: cliente?.name,
-        notes: observacoesE || undefined,
-      };
-      onAdd(tx);
+      const cliente = clientesList.find((c) => c.id === clienteId);
+      const res = await addLancamento({
+        tipo: 'entrada',
+        data: dataEmissao,
+        data_vencimento: dataVencimentoE || null,
+        descricao: descricaoE,
+        categoria: categoriaE,
+        subcategoria: subcategoriaE || null,
+        valor: valorLiquido,
+        centro_custo: centroCustoE || null,
+        cliente_fornecedor: cliente?.nome || null,
+        num_documento: nfSerie ? `${nfNumero}/${nfSerie}` : nfNumero,
+        origem: 'manual',
+        observacoes: observacoesE || null,
+      });
+      error = res.error;
     } else {
-      const fornecedor = fornecedoresList.find(f => f.id === fornecedorId);
-      const tx: Transaction = {
-        id,
-        date: dataPagamento,
-        type: 'saida',
-        description: descricaoS,
-        category: categoriaS,
-        subcategory: subcategoriaS || '',
-        value: parseFloat(valorS) || 0,
-        costCenter: centroCustoS || 'Operacional',
-        clientOrSupplier: fornecedor?.name,
-        notes: observacoesS || undefined,
-      };
-      onAdd(tx);
+      const fornecedor = fornecedoresList.find((f) => f.id === fornecedorId);
+      const res = await addLancamento({
+        tipo: 'saida',
+        data: dataPagamento,
+        data_vencimento: dataVencimentoS || null,
+        descricao: descricaoS,
+        categoria: categoriaS,
+        subcategoria: subcategoriaS || null,
+        valor: parseFloat(valorS) || 0,
+        centro_custo: centroCustoS || null,
+        cliente_fornecedor: fornecedor?.nome || null,
+        forma_pagamento: formaPagamento,
+        num_documento: numDocumento || null,
+        origem: 'manual',
+        observacoes: observacoesS || null,
+      });
+      error = res.error;
     }
 
-    toast({ title: 'Registro incluído com sucesso', description: tab === 'entrada' ? 'Nota fiscal registrada.' : 'Pagamento de despesa registrado.' });
+    setSaving(false);
+
+    if (error) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    toast({
+      title: 'Registro incluído com sucesso',
+      description: tab === 'entrada' ? 'Nota fiscal registrada.' : 'Pagamento de despesa registrado.',
+    });
     resetForm();
     setOpen(false);
   };
@@ -193,53 +206,46 @@ export function RegistroFormDialog({ onAdd }: Props) {
           </TabsList>
 
           <ScrollArea className="h-[55vh] mt-4 pr-4">
-            {/* ===== ENTRADA ===== */}
             <TabsContent value="entrada" className="mt-0 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Número da NF *</Label>
-                  <Input value={nfNumero} onChange={e => setNfNumero(e.target.value)} className={fieldClass('nfNumero')} placeholder="001234" />
+                  <Input value={nfNumero} onChange={(e) => setNfNumero(e.target.value)} className={fieldClass('nfNumero')} placeholder="001234" />
                 </div>
                 <div className="space-y-2">
                   <Label>Série</Label>
-                  <Input value={nfSerie} onChange={e => setNfSerie(e.target.value)} placeholder="001" />
+                  <Input value={nfSerie} onChange={(e) => setNfSerie(e.target.value)} placeholder="001" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Data de Emissão *</Label>
-                  <Input type="date" value={dataEmissao} onChange={e => setDataEmissao(e.target.value)} className={fieldClass('dataEmissao')} />
+                  <Input type="date" value={dataEmissao} onChange={(e) => setDataEmissao(e.target.value)} className={fieldClass('dataEmissao')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Data de Vencimento *</Label>
-                  <Input type="date" value={dataVencimentoE} onChange={e => setDataVencimentoE(e.target.value)} className={fieldClass('dataVencimentoE')} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Cliente *</Label>
-                  <Select value={clienteId} onValueChange={setClienteId}>
-                    <SelectTrigger className={fieldClass('clienteId')}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientesList.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>CNPJ/CPF do Cliente *</Label>
-                  <Input value={cnpjCliente} onChange={e => setCnpjCliente(e.target.value)} className={fieldClass('cnpjCliente')} placeholder="00.000.000/0001-00" />
+                  <Input type="date" value={dataVencimentoE} onChange={(e) => setDataVencimentoE(e.target.value)} className={fieldClass('dataVencimentoE')} />
                 </div>
               </div>
 
               <div className="space-y-2">
+                <Label>Cliente *</Label>
+                <Select value={clienteId} onValueChange={setClienteId}>
+                  <SelectTrigger className={fieldClass('clienteId')}>
+                    <SelectValue placeholder={clientesList.length ? 'Selecione' : 'Cadastre um cliente antes'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientesList.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Descrição do Serviço/Produto *</Label>
-                <Textarea value={descricaoE} onChange={e => setDescricaoE(e.target.value)} className={fieldClass('descricaoE')} placeholder="Descreva o serviço ou produto..." rows={2} />
+                <Textarea value={descricaoE} onChange={(e) => setDescricaoE(e.target.value)} className={fieldClass('descricaoE')} placeholder="Descreva o serviço ou produto..." rows={2} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -250,7 +256,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {entradaCategories.map(c => (
+                      {entradaCategories.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
                     </SelectContent>
@@ -263,7 +269,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
                       <SelectValue placeholder={subcatsE.length ? 'Selecione' : '—'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {subcatsE.map(s => (
+                      {subcatsE.map((s) => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
@@ -274,15 +280,15 @@ export function RegistroFormDialog({ onAdd }: Props) {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Valor Total (R$) *</Label>
-                  <Input type="number" min={0} step="0.01" value={valorTotal} onChange={e => setValorTotal(e.target.value)} className={fieldClass('valorTotal')} placeholder="0,00" />
+                  <Input type="number" min={0} step="0.01" value={valorTotal} onChange={(e) => setValorTotal(e.target.value)} className={fieldClass('valorTotal')} placeholder="0,00" />
                 </div>
                 <div className="space-y-2">
                   <Label>ISS (%)</Label>
-                  <Input type="number" min={0} max={100} step="0.01" value={issPercent} onChange={e => setIssPercent(e.target.value)} placeholder="0" />
+                  <Input type="number" min={0} max={100} step="0.01" value={issPercent} onChange={(e) => setIssPercent(e.target.value)} placeholder="0" />
                 </div>
                 <div className="space-y-2">
                   <Label>IRRF (%)</Label>
-                  <Input type="number" min={0} max={100} step="0.01" value={irrfPercent} onChange={e => setIrrfPercent(e.target.value)} placeholder="0" />
+                  <Input type="number" min={0} max={100} step="0.01" value={irrfPercent} onChange={(e) => setIrrfPercent(e.target.value)} placeholder="0" />
                 </div>
               </div>
 
@@ -300,7 +306,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {costCenters.map(c => (
+                    {costCenters.map((c) => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>
@@ -309,46 +315,39 @@ export function RegistroFormDialog({ onAdd }: Props) {
 
               <div className="space-y-2">
                 <Label>Observações</Label>
-                <Textarea value={observacoesE} onChange={e => setObservacoesE(e.target.value)} placeholder="Observações adicionais..." rows={2} />
+                <Textarea value={observacoesE} onChange={(e) => setObservacoesE(e.target.value)} placeholder="Observações adicionais..." rows={2} />
               </div>
             </TabsContent>
 
-            {/* ===== SAÍDA ===== */}
             <TabsContent value="saida" className="mt-0 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Data do Pagamento *</Label>
-                  <Input type="date" value={dataPagamento} onChange={e => setDataPagamento(e.target.value)} className={fieldClass('dataPagamento')} />
+                  <Input type="date" value={dataPagamento} onChange={(e) => setDataPagamento(e.target.value)} className={fieldClass('dataPagamento')} />
                 </div>
                 <div className="space-y-2">
                   <Label>Data de Vencimento *</Label>
-                  <Input type="date" value={dataVencimentoS} onChange={e => setDataVencimentoS(e.target.value)} className={fieldClass('dataVencimentoS')} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Fornecedor *</Label>
-                  <Select value={fornecedorId} onValueChange={setFornecedorId}>
-                    <SelectTrigger className={fieldClass('fornecedorId')}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fornecedoresList.map(f => (
-                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>CNPJ/CPF do Fornecedor</Label>
-                  <Input value={cnpjFornecedor} onChange={e => setCnpjFornecedor(e.target.value)} placeholder="00.000.000/0001-00" />
+                  <Input type="date" value={dataVencimentoS} onChange={(e) => setDataVencimentoS(e.target.value)} className={fieldClass('dataVencimentoS')} />
                 </div>
               </div>
 
               <div className="space-y-2">
+                <Label>Fornecedor *</Label>
+                <Select value={fornecedorId} onValueChange={setFornecedorId}>
+                  <SelectTrigger className={fieldClass('fornecedorId')}>
+                    <SelectValue placeholder={fornecedoresList.length ? 'Selecione' : 'Cadastre um fornecedor antes'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fornecedoresList.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Descrição da Despesa *</Label>
-                <Textarea value={descricaoS} onChange={e => setDescricaoS(e.target.value)} className={fieldClass('descricaoS')} placeholder="Descreva a despesa..." rows={2} />
+                <Textarea value={descricaoS} onChange={(e) => setDescricaoS(e.target.value)} className={fieldClass('descricaoS')} placeholder="Descreva a despesa..." rows={2} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -359,7 +358,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {saidaCategories.map(c => (
+                      {saidaCategories.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
                     </SelectContent>
@@ -372,7 +371,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
                       <SelectValue placeholder={subcatsS.length ? 'Selecione' : '—'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {subcatsS.map(s => (
+                      {subcatsS.map((s) => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
@@ -383,7 +382,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Valor (R$) *</Label>
-                  <Input type="number" min={0} step="0.01" value={valorS} onChange={e => setValorS(e.target.value)} className={fieldClass('valorS')} placeholder="0,00" />
+                  <Input type="number" min={0} step="0.01" value={valorS} onChange={(e) => setValorS(e.target.value)} className={fieldClass('valorS')} placeholder="0,00" />
                 </div>
                 <div className="space-y-2">
                   <Label>Forma de Pagamento *</Label>
@@ -392,7 +391,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {paymentMethods.map(m => (
+                      {paymentMethods.map((m) => (
                         <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
                     </SelectContent>
@@ -403,7 +402,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Número do Documento</Label>
-                  <Input value={numDocumento} onChange={e => setNumDocumento(e.target.value)} placeholder="Ex: 00123" />
+                  <Input value={numDocumento} onChange={(e) => setNumDocumento(e.target.value)} placeholder="Ex: 00123" />
                 </div>
                 <div className="space-y-2">
                   <Label>Centro de Custo</Label>
@@ -412,7 +411,7 @@ export function RegistroFormDialog({ onAdd }: Props) {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {costCenters.map(c => (
+                      {costCenters.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
                     </SelectContent>
@@ -422,15 +421,15 @@ export function RegistroFormDialog({ onAdd }: Props) {
 
               <div className="space-y-2">
                 <Label>Observações</Label>
-                <Textarea value={observacoesS} onChange={e => setObservacoesS(e.target.value)} placeholder="Observações adicionais..." rows={2} />
+                <Textarea value={observacoesS} onChange={(e) => setObservacoesS(e.target.value)} placeholder="Observações adicionais..." rows={2} />
               </div>
             </TabsContent>
           </ScrollArea>
         </Tabs>
 
         <DialogFooter className="p-6 pt-4 border-t border-border">
-          <Button variant="outline" onClick={() => { resetForm(); setOpen(false); }}>Cancelar</Button>
-          <Button onClick={handleSubmit}>Salvar Registro</Button>
+          <Button variant="outline" onClick={() => { resetForm(); setOpen(false); }} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={saving}>{saving ? 'Salvando...' : 'Salvar Registro'}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
