@@ -16,12 +16,16 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { categories, subcategories, costCenters, clients } from '@/data/mockData';
+import { categories, subcategories, costCenters } from '@/data/mockData';
+import { useLancamentos } from '@/hooks/useLancamentos';
+import { useCadastros } from '@/hooks/useCadastros';
 import { cn } from '@/lib/utils';
 
 export default function Lancamentos() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addLancamento } = useLancamentos();
+  const { cadastros } = useCadastros();
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -42,20 +46,19 @@ export default function Lancamentos() {
     ? subcategories[formData.category] || []
     : [];
 
-  const availableClients = formData.type === 'entrada'
-    ? clients.filter((c) => c.type === 'cliente')
-    : clients.filter((c) => c.type === 'fornecedor');
+  const availableClients =
+    formData.type === 'entrada'
+      ? cadastros.filter((c) => c.tipo === 'cliente')
+      : cadastros.filter((c) => c.tipo === 'fornecedor');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.type) newErrors.type = 'Selecione o tipo';
     if (!formData.date) newErrors.date = 'Informe a data';
     if (!formData.value || parseFloat(formData.value) <= 0)
       newErrors.value = 'Informe um valor válido';
     if (!formData.category) newErrors.category = 'Selecione a categoria';
     if (!formData.description.trim()) newErrors.description = 'Informe a descrição';
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -74,17 +77,28 @@ export default function Lancamentos() {
 
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const { error } = await addLancamento({
+      tipo: formData.type as 'entrada' | 'saida',
+      data: formData.date,
+      descricao: formData.description.trim(),
+      categoria: formData.category,
+      subcategoria: formData.subcategory || null,
+      valor: parseFloat(formData.value),
+      centro_custo: formData.costCenter || null,
+      cliente_fornecedor: formData.clientOrSupplier || null,
+      observacoes: formData.notes || null,
+      origem: 'manual',
+    });
 
     setIsLoading(false);
 
-    toast({
-      title: 'Lançamento salvo!',
-      description: 'O registro foi adicionado com sucesso.',
-    });
+    if (error) {
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
+      return;
+    }
 
-    // Reset form
+    toast({ title: 'Lançamento salvo!', description: 'O registro foi adicionado com sucesso.' });
+
     setFormData({
       type: '',
       date: new Date().toISOString().split('T')[0],
@@ -98,7 +112,6 @@ export default function Lancamentos() {
     });
   };
 
-  // Keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -106,9 +119,9 @@ export default function Lancamentos() {
         handleSubmit();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData]);
 
   return (
@@ -127,16 +140,13 @@ export default function Lancamentos() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Type */}
                 <div className="space-y-2">
                   <Label htmlFor="type">Tipo *</Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value) => setFormData({ ...formData, type: value })}
                   >
-                    <SelectTrigger
-                      className={cn('bg-background border-border', errors.type && 'border-destructive')}
-                    >
+                    <SelectTrigger className={cn('bg-background border-border', errors.type && 'border-destructive')}>
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -147,7 +157,6 @@ export default function Lancamentos() {
                   {errors.type && <p className="text-xs text-destructive">{errors.type}</p>}
                 </div>
 
-                {/* Date */}
                 <div className="space-y-2">
                   <Label htmlFor="date">Data *</Label>
                   <Input
@@ -160,7 +169,6 @@ export default function Lancamentos() {
                   {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
                 </div>
 
-                {/* Value */}
                 <div className="space-y-2">
                   <Label htmlFor="value">Valor (R$) *</Label>
                   <Input
@@ -176,35 +184,24 @@ export default function Lancamentos() {
                   {errors.value && <p className="text-xs text-destructive">{errors.value}</p>}
                 </div>
 
-                {/* Category */}
                 <div className="space-y-2">
                   <Label htmlFor="category">Categoria *</Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, category: value, subcategory: '' })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, category: value, subcategory: '' })}
                   >
-                    <SelectTrigger
-                      className={cn(
-                        'bg-background border-border',
-                        errors.category && 'border-destructive'
-                      )}
-                    >
+                    <SelectTrigger className={cn('bg-background border-border', errors.category && 'border-destructive')}>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
                       {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {errors.category && <p className="text-xs text-destructive">{errors.category}</p>}
                 </div>
 
-                {/* Subcategory */}
                 <div className="space-y-2">
                   <Label htmlFor="subcategory">Subcategoria</Label>
                   <Select
@@ -217,15 +214,12 @@ export default function Lancamentos() {
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
                       {availableSubcategories.map((sub) => (
-                        <SelectItem key={sub} value={sub}>
-                          {sub}
-                        </SelectItem>
+                        <SelectItem key={sub} value={sub}>{sub}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Cost Center */}
                 <div className="space-y-2">
                   <Label htmlFor="costCenter">Centro de Custo</Label>
                   <Select
@@ -237,15 +231,12 @@ export default function Lancamentos() {
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
                       {costCenters.map((center) => (
-                        <SelectItem key={center} value={center}>
-                          {center}
-                        </SelectItem>
+                        <SelectItem key={center} value={center}>{center}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Client/Supplier */}
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="clientOrSupplier">
                     {formData.type === 'entrada' ? 'Cliente' : 'Fornecedor'}
@@ -260,15 +251,12 @@ export default function Lancamentos() {
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
                       {availableClients.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>
-                          {item.name}
-                        </SelectItem>
+                        <SelectItem key={item.id} value={item.nome}>{item.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Description */}
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="description">Descrição *</Label>
                   <Input
@@ -276,17 +264,11 @@ export default function Lancamentos() {
                     placeholder="Descreva o lançamento"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className={cn(
-                      'bg-background border-border',
-                      errors.description && 'border-destructive'
-                    )}
+                    className={cn('bg-background border-border', errors.description && 'border-destructive')}
                   />
-                  {errors.description && (
-                    <p className="text-xs text-destructive">{errors.description}</p>
-                  )}
+                  {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
                 </div>
 
-                {/* Notes */}
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="notes">Observações</Label>
                   <Textarea
