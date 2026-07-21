@@ -135,11 +135,9 @@ export default function ConciliacaoBancaria() {
   };
 
   const handleReconcile = async (linhaId: string) => {
-    // Marca manualmente como conciliada (sem lançamento vinculado)
-    const { error } = await reconcileLine(linhaId, null);
+    const { error } = await reconcileLine(linhaId);
     if (!error) {
-      // segunda chamada apenas para forçar conciliado=true sem lancamento
-      // reconcileLine com null desmarca; então usamos update direto abaixo
+      toast({ title: 'Linha conciliada', description: 'A linha foi marcada como conciliada.' });
     }
   };
 
