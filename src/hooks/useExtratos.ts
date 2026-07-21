@@ -70,12 +70,12 @@ export function useExtratos() {
   );
 
   const reconcileLine = useCallback(
-    async (linhaId: string, lancamentoId: string | null) => {
+    async (linhaId: string, lancamentoId?: string | null) => {
       const { data, error } = await supabase
         .from('extrato_linhas')
         .update({
-          lancamento_id: lancamentoId,
-          conciliado: lancamentoId !== null,
+          lancamento_id: lancamentoId ?? null,
+          conciliado: true,
           divergencia_motivo: null,
         })
         .eq('id', linhaId)
